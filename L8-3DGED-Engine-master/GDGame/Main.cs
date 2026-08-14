@@ -117,19 +117,26 @@ namespace GDGame
 
         private void SetPauseShowMenu()
         {
-            // Give scenemanager the events reference so that it can publish the pause event
             _sceneManager.EventBus = EngineContext.Instance.Events;
-            // Set paused and publish pause event
-            _sceneManager.Paused = true;
 
-            // Put all components that should be paused to sleep
+            // Start the game unpaused
+            _sceneManager.Paused = false;
+
             EngineContext.Instance.Events.Subscribe<GamePauseChangedEvent>(e =>
             {
                 bool paused = e.IsPaused;
 
-                _sceneManager.ActiveScene.GetSystem<PhysicsSystem>()?.SetPaused(paused);
-                _sceneManager.ActiveScene.GetSystem<PhysicsDebugSystem>()?.SetPaused(paused);
-                _sceneManager.ActiveScene.GetSystem<GameStateSystem>()?.SetPaused(paused);
+                _sceneManager.ActiveScene
+                    .GetSystem<PhysicsSystem>()?
+                    .SetPaused(paused);
+
+                _sceneManager.ActiveScene
+                    .GetSystem<PhysicsDebugSystem>()?
+                    .SetPaused(paused);
+
+                _sceneManager.ActiveScene
+                    .GetSystem<GameStateSystem>()?
+                    .SetPaused(paused);
             });
         }
 

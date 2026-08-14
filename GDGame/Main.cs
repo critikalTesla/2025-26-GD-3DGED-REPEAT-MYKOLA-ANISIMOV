@@ -116,7 +116,8 @@ namespace GDGame
             int scale = 500;
             InitializeSkyParent();
             InitializeSkyBox(scale);
-            InitializePlayer();
+            //Stop spawning player monkey object
+            //InitializePlayer();
             InitializeZone1();
             #endregion
 
@@ -135,11 +136,11 @@ namespace GDGame
             base.Initialize();
         }
 
-        private GameObject CreateZone1StaticBox( //Created Zone1 creation helper
-                 string name,
-                 Vector3 position,
-                 Vector3 size,
-                 Vector3 rotationDegrees)
+        private GameObject CreateZone1StaticBox(
+                    string name,
+                    Vector3 position,
+                    Vector3 size,
+                    Vector3 rotationDegrees)
         {
             GameObject gameObject = InitializeModel(
                 position,
@@ -149,19 +150,26 @@ namespace GDGame
                 Zone1CubeModel,
                 name);
 
-            var collider = gameObject.AddComponent<BoxCollider>();
-            collider.Size = size;
+            // Create collider already configured with the correct size
+            var collider = new BoxCollider(size);
+
             collider.Center = Vector3.Zero;
 
-            var rigidBody = gameObject.AddComponent<RigidBody>();
+            gameObject.AddComponent(collider);
+
+            // Add rigid body AFTER collider
+            var rigidBody = new RigidBody();
+
             rigidBody.BodyType = BodyType.Static;
             rigidBody.UseGravity = false;
+
+            gameObject.AddComponent(rigidBody);
 
             gameObject.IsStatic = true;
 
             return gameObject;
         }
-          
+
         private void InitializeZone1()
         {
             _zone1Activated = false;
@@ -185,7 +193,7 @@ namespace GDGame
             CreateZone1StaticBox(
                 "Zone1 Floor",
                 new Vector3(0f, -0.1f, 0f),
-                new Vector3(roomWidth, 0.2f, roomLength),
+                new Vector3(100f, 0.2f, 100f),
                 Vector3.Zero);
 
             // North wall
@@ -338,14 +346,14 @@ namespace GDGame
         {
             _zone1Button = CreateZone1StaticBox(
                 "Zone1 Activation Button",
-                new Vector3(0f, 0.4f, 3.4f),
-                new Vector3(1f, 0.8f, 1f),
+                new Vector3(0f, 0.6f, 2.8f),
+                new Vector3(1f, 1.2f, 1.4f),
                 Vector3.Zero);
 
             _zone1ButtonCap = CreateZone1StaticBox(
                 "Zone1 Button Cap",
-                new Vector3(0f, 0.925f, 3.4f),
-                new Vector3(0.65f, 0.25f, 0.65f),
+                new Vector3(0f, 1.3f, 2.8f),
+                new Vector3(1f, 0.25f, 1f),
                 Vector3.Zero);
         }
         private void UpdateZone1Interaction()
@@ -411,19 +419,26 @@ namespace GDGame
 
         private void SetPauseShowMenu()
         {
-            // Give scenemanager the events reference so that it can publish the pause event
             _sceneManager.EventBus = EngineContext.Instance.Events;
-            // Set paused and publish pause event
-            _sceneManager.Paused = true;
 
-            // Put all components that should be paused to sleep
+            // Start the game unpaused
+            _sceneManager.Paused = false;
+
             EngineContext.Instance.Events.Subscribe<GamePauseChangedEvent>(e =>
             {
                 bool paused = e.IsPaused;
 
-                _sceneManager.ActiveScene.GetSystem<PhysicsSystem>()?.SetPaused(paused);
-                _sceneManager.ActiveScene.GetSystem<PhysicsDebugSystem>()?.SetPaused(paused);
-                _sceneManager.ActiveScene.GetSystem<GameStateSystem>()?.SetPaused(paused);
+                _sceneManager.ActiveScene
+                    .GetSystem<PhysicsSystem>()?
+                    .SetPaused(paused);
+
+                _sceneManager.ActiveScene
+                    .GetSystem<PhysicsDebugSystem>()?
+                    .SetPaused(paused);
+
+                _sceneManager.ActiveScene
+                    .GetSystem<GameStateSystem>()?
+                    .SetPaused(paused);
             });
         }
 
@@ -831,7 +846,7 @@ namespace GDGame
             // PARENT: physics + movement (feet at y = 0 here)
             var parentGO = new GameObject(AppData.CAMERA_NAME_FIRST_PERSON_PARENT);
             parentGO.Layer = LayerMask.IgnoreRaycast;
-            parentGO.Transform.TranslateTo(new Vector3(0f, 1f, 4f)); //spawn point inside zone1
+            parentGO.Transform.TranslateTo(new Vector3(0f, 0.1f, 4f)); //spawn point inside zone1
 
             // Capsule + rigidbody controller (kept upright internally)
             var fpsController = parentGO.AddComponent<FirstPersonCapsuleController>();
@@ -848,7 +863,7 @@ namespace GDGame
             cameraGO.Transform.SetParent(parentGO.Transform);
 
             // Local offset from feet → eye height
-            cameraGO.Transform.TranslateTo(new Vector3(0, 0, 0));
+            cameraGO.Transform.TranslateTo(new Vector3(0, 1.6f, 0));
             camera = cameraGO.AddComponent<Camera>();
             camera.FieldOfView = MathHelper.ToRadians(80.0f);
             var mouseLook = cameraGO.AddComponent<MouseYawPitchController>();
