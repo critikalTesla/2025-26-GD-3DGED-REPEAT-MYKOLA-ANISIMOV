@@ -47,7 +47,31 @@ namespace GDGame
         private ContentDictionary<Effect> _effectsDictionary;
         private bool _disposed = false;
         private Material _matBasicUnlit, _matBasicLit, _matAlphaCutout, _matBasicUnlitGround;
-        private PBRMaterial _matPBR;
+        //private PBRMaterial _matPBR;
+        #endregion
+
+        #region Zone 1 Fields
+
+        private const string Zone1CubeModel = "cube1";
+        private const string Zone1SphereModel = "sphere1";
+        private const string Zone1Texture = "crate1";
+
+        private GameObject _zone1Button;
+        private GameObject _zone1ButtonCap;
+
+        private GameObject _zone1Sphere1;
+        private GameObject _zone1Sphere2;
+
+        private RigidBody _zone1Sphere1Body;
+        private RigidBody _zone1Sphere2Body;
+
+        private KeyboardState _zone1PreviousKeyboardState;
+
+        private bool _zone1Activated;
+        private bool _zone1PlayerNearButton;
+
+        private const float Zone1InteractionDistance = 2.5f;
+
         #endregion
 
         #region Demo Fields (remove in the game)
@@ -78,7 +102,7 @@ namespace GDGame
         protected override void Initialize()
         {
             #region Core
-            Window.Title = "My Amazing Game";
+            Window.Title = "My personal Pain";
             InitializeGraphics(ScreenResolution.R_WXGA_16_10_1280x800);
             InitializeMouse();
             InitializeContext();
@@ -161,6 +185,272 @@ namespace GDGame
             _sceneManager.SetActiveScene(AppData.LEVEL_1_NAME);
 
             base.Initialize();
+        }
+
+        private GameObject CreateZone1StaticBox( //Created Zone1 creation helper
+                 string name,
+                 Vector3 position,
+                 Vector3 size,
+                 Vector3 rotationDegrees)
+        {
+            GameObject gameObject = InitializeModel(
+                position,
+                rotationDegrees,
+                size,
+                Zone1Texture,
+                Zone1CubeModel,
+                name);
+
+            var collider = gameObject.AddComponent<BoxCollider>();
+            collider.Size = size;
+            collider.Center = Vector3.Zero;
+
+            var rigidBody = gameObject.AddComponent<RigidBody>();
+            rigidBody.BodyType = BodyType.Static;
+            rigidBody.UseGravity = false;
+
+            gameObject.IsStatic = true;
+
+            return gameObject;
+        }
+            private GameObject CreateZone1Sphere( //Created the shpere that will fall downs
+                string name,
+                Vector3 position,
+                float radius,
+                BodyType startingBodyType,
+                bool useGravity,
+                out RigidBody rigidBody)
+        {
+            Vector3 visualScale = Vector3.One * (radius * 2f);
+
+            GameObject sphere = InitializeModel(
+                position,
+                Vector3.Zero,
+                visualScale,
+                Zone1Texture,
+                Zone1SphereModel,
+                name);
+
+            var sphereCollider = sphere.AddComponent<SphereCollider>();
+            sphereCollider.Radius = radius;
+            sphereCollider.Center = Vector3.Zero;
+
+            rigidBody = sphere.AddComponent<RigidBody>();
+            rigidBody.BodyType = startingBodyType;
+            rigidBody.Mass = 1f;
+            rigidBody.UseGravity = useGravity;
+
+            rigidBody.LinearDamping = 0.02f;
+            rigidBody.AngularDamping = 0.02f;
+
+            rigidBody.LinearVelocity = Vector3.Zero;
+            rigidBody.AngularVelocity = Vector3.Zero;
+
+            return sphere;
+        }
+        private void InitializeZone1()
+        {
+            _zone1Activated = false;
+            _zone1PlayerNearButton = false;
+            _zone1PreviousKeyboardState = Keyboard.GetState();
+
+            InitializeZone1Room();
+            InitializeZone1Table();
+            InitializeZone1Ramp();
+            InitializeZone1Spheres();
+            InitializeZone1Button();
+        }
+        private void InitializeZone1Room()
+        {
+            const float roomWidth = 12f;
+            const float roomLength = 10f;
+            const float roomHeight = 4f;
+            const float wallThickness = 0.2f;
+
+            // Floor
+            CreateZone1StaticBox(
+                "Zone1 Floor",
+                new Vector3(0f, -0.1f, 0f),
+                new Vector3(roomWidth, 0.2f, roomLength),
+                Vector3.Zero);
+
+            // North wall
+            CreateZone1StaticBox(
+                "Zone1 North Wall",
+                new Vector3(0f, roomHeight / 2f, -roomLength / 2f),
+                new Vector3(roomWidth, roomHeight, wallThickness),
+                Vector3.Zero);
+
+            // South wall
+            CreateZone1StaticBox(
+                "Zone1 South Wall",
+                new Vector3(0f, roomHeight / 2f, roomLength / 2f),
+                new Vector3(roomWidth, roomHeight, wallThickness),
+                Vector3.Zero);
+
+            // Left wall
+            CreateZone1StaticBox(
+                "Zone1 West Wall",
+                new Vector3(-roomWidth / 2f, roomHeight / 2f, 0f),
+                new Vector3(wallThickness, roomHeight, roomLength),
+                Vector3.Zero);
+
+            // Right wall
+            CreateZone1StaticBox(
+                "Zone1 East Wall",
+                new Vector3(roomWidth / 2f, roomHeight / 2f, 0f),
+                new Vector3(wallThickness, roomHeight, roomLength),
+                Vector3.Zero);
+
+            // Door
+            CreateZone1StaticBox(
+                "Zone1 Door",
+                new Vector3(0f, 1.5f, -4.85f),
+                new Vector3(2f, 3f, 0.25f),
+                Vector3.Zero);
+        }
+        private void InitializeZone1Table()
+        {
+            // Tabletop
+            CreateZone1StaticBox(
+                "Zone1 Table  Top",
+                new Vector3(0f, 2f, 0f),
+                new Vector3(5f, 0.3f, 3f),
+                Vector3.Zero);
+
+            const float legY = 0.925f;
+
+            // Front left leg
+            CreateZone1StaticBox(
+                "Zone1 Table Leg Front Left",
+                new Vector3(-2.1f, legY, 1.1f),
+                new Vector3(0.35f, 1.85f, 0.35f),
+                Vector3.Zero);
+
+            // Front right leg
+            CreateZone1StaticBox(
+                "Zone1 Table Leg Front Right",
+                new Vector3(2.1f, legY, 1.1f),
+                new Vector3(0.35f, 1.85f, 0.35f),
+                Vector3.Zero);
+
+            // Back left leg
+            CreateZone1StaticBox(
+                "Zone1 Table Leg Back Left",
+                new Vector3(-2.1f, legY, -1.1f),
+                new Vector3(0.35f, 1.85f, 0.35f),
+                Vector3.Zero);
+
+            // Back right leg
+            CreateZone1StaticBox(
+                "Zone1 Table Leg Back Right",
+                new Vector3(2.1f, legY, -1.1f),
+                new Vector3(0.35f, 1.85f, 0.35f),
+                Vector3.Zero);
+        }
+        private void InitializeZone1Ramp()
+        {
+            CreateZone1StaticBox(
+                "Zone1 Ramp",
+                new Vector3(0f, 2.65f, 0f),
+                new Vector3(1.5f, 0.2f, 4f),
+                new Vector3(-15f, 0f, 0f));
+        }
+        private void InitializeZone1Spheres()
+        {
+            const float sphereRadius = 0.45f;
+
+            // Sphere1 - already dynamic
+            _zone1Sphere1 = CreateZone1Sphere(
+                "Zone1 Sphere1",
+                new Vector3(0f, 2.65f, 1.65f),
+                sphereRadius,
+                BodyType.Dynamic,
+                true,
+                out _zone1Sphere1Body);
+
+            // Sphere2 - suspended until button press
+            _zone1Sphere2 = CreateZone1Sphere(
+                "Zone1 Sphere2",
+                new Vector3(0f, 3.8f, -1.35f),
+                sphereRadius,
+                BodyType.Kinematic,
+                false,
+                out _zone1Sphere2Body);
+        }
+        private void InitializeZone1Button()
+        {
+            _zone1Button = CreateZone1StaticBox(
+                "Zone1 Activation Button",
+                new Vector3(0f, 0.4f, 3.4f),
+                new Vector3(1f, 0.8f, 1f),
+                Vector3.Zero);
+
+            _zone1ButtonCap = CreateZone1StaticBox(
+                "Zone1 Button Cap",
+                new Vector3(0f, 0.925f, 3.4f),
+                new Vector3(0.65f, 0.25f, 0.65f),
+                Vector3.Zero);
+        }
+        private void UpdateZone1Interaction()
+        {
+            if (_zone1Button == null || _zone1Sphere2Body == null)
+                return;
+
+            KeyboardState currentKeyboardState = Keyboard.GetState();
+
+            GameObject player = _sceneManager.ActiveScene.Find(
+                gameObject =>
+                    gameObject.Name == AppData.CAMERA_NAME_FIRST_PERSON_PARENT);
+
+            if (player == null)
+            {
+                _zone1PreviousKeyboardState = currentKeyboardState;
+                return;
+            }
+
+            float distanceToButton = Vector3.Distance(
+                player.Transform.Position,
+                _zone1Button.Transform.Position);
+
+            _zone1PlayerNearButton =
+                distanceToButton <= Zone1InteractionDistance;
+
+            bool ePressedThisFrame =
+                currentKeyboardState.IsKeyDown(Keys.E) &&
+                _zone1PreviousKeyboardState.IsKeyUp(Keys.E);
+
+            if (_zone1PlayerNearButton &&
+                ePressedThisFrame &&
+                !_zone1Activated)
+            {
+                ActivateZone1Puzzle();
+            }
+
+            _zone1PreviousKeyboardState = currentKeyboardState;
+        }
+        private void ActivateZone1Puzzle()
+        {
+            if (_zone1Activated || _zone1Sphere2Body == null)
+                return;
+
+            _zone1Activated = true;
+
+            _zone1Sphere2Body.LinearVelocity = Vector3.Zero;
+            _zone1Sphere2Body.AngularVelocity = Vector3.Zero;
+
+            _zone1Sphere2Body.BodyType = BodyType.Dynamic;
+            _zone1Sphere2Body.UseGravity = true;
+
+            if (_zone1ButtonCap != null)
+            {
+                _zone1ButtonCap.Transform.TranslateTo(
+                    _zone1ButtonCap.Transform.Position +
+                    new Vector3(0f, -0.15f, 0f));
+            }
+
+            System.Diagnostics.Debug.WriteLine(
+                "Zone 1 activated: Sphere2 released.");
         }
 
         private void SetPauseShowMenu()
@@ -504,6 +794,7 @@ namespace GDGame
                                            //  InitializeNavMeshSystem();
 
             InitializeDebugInfo(true);
+            InitializeZone1();
         }
 
         private void InitializeDebugInfo(bool showDebug)
@@ -705,7 +996,7 @@ namespace GDGame
             // PARENT: physics + movement (feet at y = 0 here)
             var parentGO = new GameObject(AppData.CAMERA_NAME_FIRST_PERSON_PARENT);
             parentGO.Layer = LayerMask.IgnoreRaycast;
-            parentGO.Transform.TranslateTo(new Vector3(0f, 5f, 15f));
+            parentGO.Transform.TranslateTo(new Vector3(0f, 1f, 4f)); //spawn point inside zone1
 
             // Capsule + rigidbody controller (kept upright internally)
             var fpsController = parentGO.AddComponent<FirstPersonCapsuleController>();
@@ -977,6 +1268,7 @@ namespace GDGame
             #region Demo
             DemoStuff();
             #endregion
+            UpdateZone1Interaction();
 
             base.Update(gameTime);
         }

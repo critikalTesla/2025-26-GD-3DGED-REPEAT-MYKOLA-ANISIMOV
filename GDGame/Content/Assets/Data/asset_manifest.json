@@ -6,7 +6,7 @@
   },
   "fonts": [
     {
-      "name": "perf_stats_font",
+      "name": "Aerial",
       "contentPath": "assets/fonts/perfStats"
     },
     {
@@ -54,6 +54,10 @@
     {
       "name": "checkerboard",
       "contentPath": "assets/textures/demo/checkerboard"
+    },
+    {
+      "name": "TableTexture",
+      "contentPath": "assets/textures/architexture/tabletexture2"
     },
     {
       "name": "mona lisa",
@@ -136,6 +140,14 @@
     {
       "name": "teapot_lowpoly",
       "contentPath": "assets/models/teapot_lowpoly"
+    },
+    {
+      "name": "table",
+      "contentPath": "assets/models/table"
+    },
+    {
+      "name": "ramp",
+      "contentPath": "assets/models/ramp"
     },
     {
       "name": "plane",

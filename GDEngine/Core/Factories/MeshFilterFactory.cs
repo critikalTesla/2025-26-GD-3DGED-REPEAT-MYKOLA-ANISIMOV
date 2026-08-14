@@ -1008,8 +1008,9 @@ namespace GDEngine.Core.Factories
         /// <param name="device">Graphics device for buffer creation.</param>
         /// <param name="meshIndex">Which ModelMesh to use (default 0).</param>
         /// <param name="partIndex">Which ModelMeshPart within that mesh (default 0).</param>
-        public static MeshFilter CreateFromModel(Model model,
-                                                 GraphicsDevice device,
+        
+        public static MeshFilter CreateFromModel(Model? model,
+                                                 GraphicsDevice? device,
                                                  int meshIndex = 0,
                                                  int partIndex = 0)
         {
