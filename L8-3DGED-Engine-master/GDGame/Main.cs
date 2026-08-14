@@ -51,23 +51,18 @@ namespace GDGame
         #endregion
 
         #region Demo Fields (remove in the game)
-        private AnimationCurve3D _animationPositionCurve, _animationRotationCurve;
-        private AnimationCurve _animationCurve;
         private KeyboardState _newKBState, _oldKBState;
         private int _damageAmount;
 
-        // Simple debug subscription for collision events
-        private IDisposable _collisionSubscription;
 
-        // LayerMask used to filter which collisions we care about in debug
-        private LayerMask _collisionDebugMask = LayerMask.All;
+        // LayerMask used to filter which collisions we care about in debug(we don't now :D)
         private SceneManager _sceneManager;
         private float _currentHealth = 100;
         private MenuManager _menuManager;
         private UIDebugInfo _debugRenderer;
         #endregion
 
-        #region Core Methods (Common to all games)     
+        Core Methods (Common to all games)     
         public Main()
         {
             _graphics = new GraphicsDeviceManager(this);
@@ -101,58 +96,15 @@ namespace GDGame
             int scale = 500;
             InitializeSkyParent();
             InitializeSkyBox(scale);
-            InitializeCollidableGround(scale);
             InitializePlayer();
             #endregion
-
-            #region Demos
-
-            #region Animation curves
-            // Camera-demos
-            InitializeAnimationCurves();
-            #endregion
-
-            #region Collidables
-            // Demo event listeners on collision
-            InitializeCollisionEventListener();
-
-            // Collidable game object demos
-            DemoCollidablePrimitive(new Vector3(0, 20, 5.1f), Vector3.One * 6, new Vector3(15, 45, 45));
-            DemoCollidablePrimitive(new Vector3(0, 10, 5.2f), Vector3.One * 1, new Vector3(45, 0, 0));
-            DemoCollidablePrimitive(new Vector3(0, 5, 5.3f), Vector3.One * 1, new Vector3(0, 0, 45));
-            DemoCollidableModel(new Vector3(0, 50, 10), Vector3.Zero, new Vector3(2, 1.25f, 2));
-            DemoCollidableModel(new Vector3(0, 40, 11), Vector3.Zero, new Vector3(2, 1.25f, 2));
-            DemoCollidableModel(new Vector3(0, 25, 12), Vector3.Zero, new Vector3(2, 1.25f, 2));
-            #endregion
-
-            #region Alpha effect
-            DemoAlphaCutoutFoliage(new Vector3(0, 10 /*note Y=heightscale/2*/, 0), 12, 20);
-            #endregion
-
-            #region Loading GameObjects from JSON
-            DemoLoadFromJSON();
-            #endregion
-
-            #region Sequencing using Orchestration
-            DemoOrchestrationSystem();
-            #endregion
-
-            #region PBR Lighting
-            //DemoPBRGameObject(string objectName, string modelName, Vector3 position, Vector3 scale, Vector3 eulerRotationDegrees,
-            //Texture2D albedoTexture, Texture2D normalTexture, Texture2D srmTexture,
-            //Color albedoColor, float roughness, float metallic);
-            #endregion
-
-        #endregion
 
             // Mouse reticle
             InitializeUI();
 
             // Main menu
             InitializeMenuManager();
-    
-            // Set win/lose conditions
-            SetWinConditions();
+   
 
             // Set pause and show menu
             SetPauseShowMenu();
@@ -247,46 +199,6 @@ namespace GDGame
    
         }
 
-        private void InitializeCollidableGround(int scale = 500)
-        {
-            GameObject gameObject = null;
-            MeshFilter meshFilter = null;
-            MeshRenderer meshRenderer = null;
-
-            gameObject = new GameObject("ground");
-            meshFilter = MeshFilterFactory.CreateQuadTexturedLit(_graphics.GraphicsDevice);
-            meshFilter = MeshFilterFactory.CreateQuadGridTexturedUnlit(_graphics.GraphicsDevice,
-                 1,
-                 1,
-                 1,
-                 1,
-                 20,
-                 20);
-
-            gameObject.Transform.ScaleBy(new Vector3(scale, scale, 1));
-            gameObject.Transform.RotateEulerBy(new Vector3(MathHelper.ToRadians(-90), 0, 0), true);
-            gameObject.Transform.TranslateTo(new Vector3(0, -0.5f, 0));
-
-            gameObject.AddComponent(meshFilter);
-            meshRenderer = gameObject.AddComponent<MeshRenderer>();
-            meshRenderer.Material = _matBasicUnlitGround;
-            meshRenderer.Overrides.MainTexture = _textureDictionary.Get("ground_grass");
-
-            // Add a box collider matching the ground size
-            var collider = gameObject.AddComponent<BoxCollider>();
-            collider.Size = new Vector3(scale, scale, 0.025f);
-            collider.Center = new Vector3(0, 0, -0.0125f);
-
-            // Add rigidbody as Static (immovable)
-            var rigidBody = gameObject.AddComponent<RigidBody>();
-            rigidBody.BodyType = BodyType.Static;
-            gameObject.IsStatic = true;
-
-            gameObject.Layer = LayerMask.Ground;
-
-            _sceneManager.ActiveScene.Add(gameObject);
-        }
-
         private void InitializePlayer()
         {
             GameObject player = InitializeModel(new Vector3(0, 5, 10),
@@ -366,9 +278,6 @@ namespace GDGame
         private void InitializeMouse()
         {
             Mouse.SetPosition(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2);
-
-            // Set old state at start so its not null for comparison with new state in Update
-            _oldKBState = Keyboard.GetState();
         }
 
         private void InitializeContext()
@@ -970,14 +879,8 @@ namespace GDGame
         protected override void Update(GameTime gameTime)
         {
             //call time update
-            #region Core
             Time.Update(gameTime);
-            #endregion
-
-            #region Demo
-            DemoStuff();
-            #endregion
-
+            UpdateZone1Interaction();
             base.Update(gameTime);
         }
 
@@ -1037,16 +940,8 @@ namespace GDGame
 
                 // 5. Clear references to help GC
                 System.Diagnostics.Debug.WriteLine("Clearing References");
-                _animationCurve = null;
-                _animationPositionCurve = null;
-                _animationRotationCurve = null;
 
-                // 6. Dispose of collision handlers
-                if (_collisionSubscription != null)
-                {
-                    _collisionSubscription.Dispose();
-                    _collisionSubscription = null;
-                }
+                // 6. Dispose of collision handlers               
 
                 System.Diagnostics.Debug.WriteLine("Main disposal complete");
             }
@@ -1057,70 +952,6 @@ namespace GDGame
             base.Dispose(disposing);
         }
 
-        #endregion
-
-        #region Demo Methods (remove in the game)
-
-        //#region Demo - PBR Lighting
-        //private void DemoPBRGameObject(string objectName, string modelName, Vector3 position, Vector3 scale, Vector3 eulerRotationDegrees, 
-        //    Texture2D albedoTexture, Texture2D normalTexture, Texture2D srmTexture, 
-        //    Color albedoColor, float roughness, float metallic)
-        //{
-        //    GameObject gameObject = null;
-
-        //    gameObject = new GameObject(objectName);
-        //    gameObject.Transform.TranslateTo(position);
-        //    gameObject.Transform.RotateEulerBy(eulerRotationDegrees * MathHelper.Pi / 180f);
-        //    gameObject.Transform.ScaleTo(scale);
-        //    var model = _modelDictionary.Get(modelName);
-        //    var meshFilter = MeshFilterFactory.CreateFromModel(model, _graphics.GraphicsDevice, 0, 0);
-        //    gameObject.AddComponent(meshFilter);
-        //    var meshRenderer = gameObject.AddComponent<MeshRenderer>();
-
-        //    #region PBR specific material settings
-        //    // Set material properties
-        //    _matPBR.AlbedoTexture = albedoTexture;
-        //    _matPBR.NormalTexture = normalTexture;
-        //    _matPBR.SRMTexture = srmTexture;
-        //    _matPBR.AlbedoColor = albedoColor;
-        //    _matPBR.DefaultRoughness = roughness;
-        //    _matPBR.DefaultMetallic = metallic;
-        //    meshRenderer.Material = _matPBR.Material;
-        //    #endregion
-
-        //    _sceneManager.ActiveScene.Add(gameObject);
-        //} 
-        //#endregion
-
-        #region Demo - Game State
-        private void SetWinConditions()
-        {
-            var gameStateSystem = _sceneManager.ActiveScene.GetSystem<GameStateSystem>();
-
-            // Value providers (Strategy pattern via delegates)
-            Func<float> healthProvider = () =>
-            {
-                //get the player and access the player's health/speed/other variable
-                return _currentHealth;
-            };
-
-            // Delegate for time
-            Func<float> timeProvider = () =>
-            {
-                return (float)Time.RealtimeSinceStartupSecs;
-            };
-
-            // Lose condition: health < 10 AND time > 60
-            IGameCondition loseCondition =
-                GameConditions.FromPredicate("all enemies visited", checkEnemiesVisited);
-
-            IGameCondition winCondition =
-            GameConditions.FromPredicate("reached gate", checkReachedGate);
-
-            // Configure GameStateSystem (no win condition yet)
-            gameStateSystem.ConfigureConditions(winCondition, loseCondition);
-            gameStateSystem.StateChanged += HandleGameStateChange;
-        }
 
         private bool checkReachedGate()
         {
@@ -1154,7 +985,6 @@ namespace GDGame
             }
 
         }
-        #endregion
       
         private void DemoCollidableModel(Vector3 position, Vector3 eulerRotationDegrees, Vector3 scale)
         {
@@ -1476,9 +1306,6 @@ namespace GDGame
         private void InitializeCollisionEventListener()
         {
             var events = EngineContext.Instance.Events;
-
-            // Lowest friction: just subscribe with default priority & no filter
-            _collisionSubscription = events.Subscribe<CollisionEvent>(OnCollisionEvent);
         }
 
         /// <summary>
@@ -1505,6 +1332,6 @@ namespace GDGame
         }
 
 
-        #endregion
+     
     }
 }
