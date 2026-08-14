@@ -52,9 +52,15 @@ namespace GDGame
 
         #region Zone 1 Fields
 
-        private const string Zone1CubeModel = "cube1";
-        private const string Zone1SphereModel = "sphere1";
+
+        private const string Zone1CubeModel = "cube";
+        private const string Zone1MonkeyModel = "monkey1";
+        private const string Zone1TableModel = "table";
+        private const string Zone1RampModel = "ramp";
+
         private const string Zone1Texture = "crate1";
+
+
 
         private GameObject _zone1Button;
         private GameObject _zone1ButtonCap;
@@ -127,6 +133,7 @@ namespace GDGame
             InitializeSkyBox(scale);
             InitializeCollidableGround(scale);
             InitializePlayer();
+            InitializeZone1();
             #endregion
 
             #region Demos
@@ -136,18 +143,18 @@ namespace GDGame
             InitializeAnimationCurves();
             #endregion
 
-            #region Collidables
+           // #region Collidables
             // Demo event listeners on collision
-            InitializeCollisionEventListener();
+           // InitializeCollisionEventListener();
 
             // Collidable game object demos
-            DemoCollidablePrimitive(new Vector3(0, 20, 5.1f), Vector3.One * 6, new Vector3(15, 45, 45));
-            DemoCollidablePrimitive(new Vector3(0, 10, 5.2f), Vector3.One * 1, new Vector3(45, 0, 0));
-            DemoCollidablePrimitive(new Vector3(0, 5, 5.3f), Vector3.One * 1, new Vector3(0, 0, 45));
-            DemoCollidableModel(new Vector3(0, 50, 10), Vector3.Zero, new Vector3(2, 1.25f, 2));
-            DemoCollidableModel(new Vector3(0, 40, 11), Vector3.Zero, new Vector3(2, 1.25f, 2));
-            DemoCollidableModel(new Vector3(0, 25, 12), Vector3.Zero, new Vector3(2, 1.25f, 2));
-            #endregion
+           // DemoCollidablePrimitive(new Vector3(0, 20, 5.1f), Vector3.One * 6, new Vector3(15, 45, 45));
+           // DemoCollidablePrimitive(new Vector3(0, 10, 5.2f), Vector3.One * 1, new Vector3(45, 0, 0));
+           // DemoCollidablePrimitive(new Vector3(0, 5, 5.3f), Vector3.One * 1, new Vector3(0, 0, 45));
+           // DemoCollidableModel(new Vector3(0, 50, 10), Vector3.Zero, new Vector3(2, 1.25f, 2));
+           // DemoCollidableModel(new Vector3(0, 40, 11), Vector3.Zero, new Vector3(2, 1.25f, 2));
+          //  DemoCollidableModel(new Vector3(0, 25, 12), Vector3.Zero, new Vector3(2, 1.25f, 2));
+          //  #endregion
 
             #region Alpha effect
             DemoAlphaCutoutFoliage(new Vector3(0, 10 /*note Y=heightscale/2*/, 0), 12, 20);
@@ -213,41 +220,7 @@ namespace GDGame
 
             return gameObject;
         }
-            private GameObject CreateZone1Sphere( //Created the shpere that will fall downs
-                string name,
-                Vector3 position,
-                float radius,
-                BodyType startingBodyType,
-                bool useGravity,
-                out RigidBody rigidBody)
-        {
-            Vector3 visualScale = Vector3.One * (radius * 2f);
-
-            GameObject sphere = InitializeModel(
-                position,
-                Vector3.Zero,
-                visualScale,
-                Zone1Texture,
-                Zone1SphereModel,
-                name);
-
-            var sphereCollider = sphere.AddComponent<SphereCollider>();
-            sphereCollider.Radius = radius;
-            sphereCollider.Center = Vector3.Zero;
-
-            rigidBody = sphere.AddComponent<RigidBody>();
-            rigidBody.BodyType = startingBodyType;
-            rigidBody.Mass = 1f;
-            rigidBody.UseGravity = useGravity;
-
-            rigidBody.LinearDamping = 0.02f;
-            rigidBody.AngularDamping = 0.02f;
-
-            rigidBody.LinearVelocity = Vector3.Zero;
-            rigidBody.AngularVelocity = Vector3.Zero;
-
-            return sphere;
-        }
+          
         private void InitializeZone1()
         {
             _zone1Activated = false;
@@ -257,7 +230,7 @@ namespace GDGame
             InitializeZone1Room();
             InitializeZone1Table();
             InitializeZone1Ramp();
-            InitializeZone1Spheres();
+            InitializeZone1Monkeys();
             InitializeZone1Button();
         }
         private void InitializeZone1Room()
@@ -311,69 +284,111 @@ namespace GDGame
         }
         private void InitializeZone1Table()
         {
-            // Tabletop
-            CreateZone1StaticBox(
-                "Zone1 Table  Top",
-                new Vector3(0f, 2f, 0f),
-                new Vector3(5f, 0.3f, 3f),
-                Vector3.Zero);
+            GameObject table = InitializeModel(
+                new Vector3(0f, 0f, 0f),
+                Vector3.Zero,
+                new Vector3(1f, 1f, 1f),
+                "TableTexture",
+                Zone1TableModel,
+                "table");
 
-            const float legY = 0.925f;
+            var collider = table.AddComponent<BoxCollider>();
 
-            // Front left leg
-            CreateZone1StaticBox(
-                "Zone1 Table Leg Front Left",
-                new Vector3(-2.1f, legY, 1.1f),
-                new Vector3(0.35f, 1.85f, 0.35f),
-                Vector3.Zero);
+            collider.Size = new Vector3(
+                5f,
+                2f,
+                3f);
 
-            // Front right leg
-            CreateZone1StaticBox(
-                "Zone1 Table Leg Front Right",
-                new Vector3(2.1f, legY, 1.1f),
-                new Vector3(0.35f, 1.85f, 0.35f),
-                Vector3.Zero);
+            collider.Center = new Vector3(
+                0f,
+                1f,
+                0f);
 
-            // Back left leg
-            CreateZone1StaticBox(
-                "Zone1 Table Leg Back Left",
-                new Vector3(-2.1f, legY, -1.1f),
-                new Vector3(0.35f, 1.85f, 0.35f),
-                Vector3.Zero);
+            var rigidBody = table.AddComponent<RigidBody>();
 
-            // Back right leg
-            CreateZone1StaticBox(
-                "Zone1 Table Leg Back Right",
-                new Vector3(2.1f, legY, -1.1f),
-                new Vector3(0.35f, 1.85f, 0.35f),
-                Vector3.Zero);
+            rigidBody.BodyType = BodyType.Static;
+            rigidBody.UseGravity = false;
+
+            table.IsStatic = true;
         }
         private void InitializeZone1Ramp()
         {
-            CreateZone1StaticBox(
-                "Zone1 Ramp",
+            GameObject ramp = InitializeModel(
                 new Vector3(0f, 2.65f, 0f),
-                new Vector3(1.5f, 0.2f, 4f),
-                new Vector3(-15f, 0f, 0f));
-        }
-        private void InitializeZone1Spheres()
-        {
-            const float sphereRadius = 0.45f;
+                new Vector3(-15f, 0f, 0f),
+                new Vector3(1f, 1f, 1f),
+                Zone1Texture,
+                Zone1RampModel,
+                "ramp");
 
-            // Sphere1 - already dynamic
-            _zone1Sphere1 = CreateZone1Sphere(
-                "Zone1 Sphere1",
-                new Vector3(0f, 2.65f, 1.65f),
-                sphereRadius,
+            var collider = ramp.AddComponent<BoxCollider>();
+
+            collider.Size = new Vector3(
+                1.5f,
+                0.3f,
+                4f);
+
+            collider.Center = Vector3.Zero;
+
+            var rigidBody = ramp.AddComponent<RigidBody>();
+
+            rigidBody.BodyType = BodyType.Static;
+            rigidBody.UseGravity = false;
+
+            ramp.IsStatic = true;
+        }
+        private GameObject CreateZone1Monkey(
+                string name,
+                Vector3 position,
+                float scale,
+                BodyType startingBodyType,
+                bool useGravity,
+                out RigidBody rigidBody)
+        {
+            GameObject monkey = InitializeModel(
+                position,
+                Vector3.Zero,
+                Vector3.One * scale,
+                "mona lisa",
+                Zone1MonkeyModel,
+                name);
+
+            var collider = monkey.AddComponent<SphereCollider>();
+
+            collider.Diameter = scale;
+
+            rigidBody = monkey.AddComponent<RigidBody>();
+
+            rigidBody.BodyType = startingBodyType;
+            rigidBody.Mass = 1f;
+            rigidBody.UseGravity = useGravity;
+
+            rigidBody.LinearDamping = 0.02f;
+            rigidBody.AngularDamping = 0.02f;
+
+            rigidBody.LinearVelocity = Vector3.Zero;
+            rigidBody.AngularVelocity = Vector3.Zero;
+
+            return monkey;
+        }
+        private void InitializeZone1Monkeys()
+        {
+            const float monkeyScale = 0.9f;
+
+            // Monkey 1 - already on the table/ramp
+            _zone1Sphere1 = CreateZone1Monkey(
+                "Zone1 Monkey1",
+                new Vector3(0f, 2.95f, 1.4f),
+                monkeyScale,
                 BodyType.Dynamic,
                 true,
                 out _zone1Sphere1Body);
 
-            // Sphere2 - suspended until button press
-            _zone1Sphere2 = CreateZone1Sphere(
-                "Zone1 Sphere2",
-                new Vector3(0f, 3.8f, -1.35f),
-                sphereRadius,
+            // Monkey 2 - suspended above the ramp
+            _zone1Sphere2 = CreateZone1Monkey(
+                "Zone1 Monkey2",
+                new Vector3(0f, 4.5f, -1.3f),
+                monkeyScale,
                 BodyType.Kinematic,
                 false,
                 out _zone1Sphere2Body);
@@ -794,7 +809,6 @@ namespace GDGame
                                            //  InitializeNavMeshSystem();
 
             InitializeDebugInfo(true);
-            InitializeZone1();
         }
 
         private void InitializeDebugInfo(bool showDebug)
