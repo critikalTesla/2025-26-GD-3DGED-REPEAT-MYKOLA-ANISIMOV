@@ -187,20 +187,58 @@ namespace GDGame
             InitializeZone1Button();
         }
         private void InitializeZone1Floor(
-                        float roomWidth,
-                        float roomLength)
+    float roomWidth,
+    float roomLength)
         {
-            GameObject floor =
-                new GameObject("Zone1 Floor");
+           //Texture and model
+            GameObject floorVisual =
+                new GameObject("Zone1 Floor Visual");
 
-            // Position centre of collider below Y=0.
-            floor.Transform.TranslateTo(
+            // Create a flat rectangular mesh.
+            MeshFilter floorMesh =
+                MeshFilterFactory.CreateQuadGridTexturedLit(
+                    _graphics.GraphicsDevice,
+                    1,
+                    1,
+                    roomWidth,
+                    roomLength,
+                    4f,
+                    4f);
+
+            floorVisual.AddComponent(floorMesh);
+
+            MeshRenderer floorRenderer =
+                floorVisual.AddComponent<MeshRenderer>();
+
+            floorRenderer.Material =
+                _matBasicUnlitGround;
+
+            floorRenderer.Overrides.MainTexture =
+                _textureDictionary.Get(Zone1Texture);
+
+            // The generated quad needs to lie horizontally.
+            floorVisual.Transform.RotateEulerBy(
+                new Vector3(
+                    MathHelper.ToRadians(-90f),
+                    0f,
+                    0f));
+
+            // Slightly above the collider so there is no z-fighting.
+            floorVisual.Transform.TranslateTo(
+                new Vector3(0f, 0.01f, 0f));
+
+            _sceneManager.ActiveScene.Add(floorVisual);
+
+            // Phisics part
+
+            GameObject floorPhysics =
+                new GameObject("Zone1 Floor Physics");
+
+            floorPhysics.Transform.TranslateTo(
                 new Vector3(0f, -0.25f, 0f));
 
-            // COLLIDER
-
             var collider =
-                floor.AddComponent<BoxCollider>();
+                floorPhysics.AddComponent<BoxCollider>();
 
             collider.Size =
                 new Vector3(
@@ -208,15 +246,12 @@ namespace GDGame
                     0.5f,
                     roomLength);
 
-            collider.Center =
-                Vector3.Zero;
+            collider.Center = Vector3.Zero;
 
             collider.IsTrigger = false;
 
-            // RIGID BODY
-
             var rigidBody =
-                floor.AddComponent<RigidBody>();
+                floorPhysics.AddComponent<RigidBody>();
 
             rigidBody.BodyType =
                 BodyType.Static;
@@ -224,11 +259,9 @@ namespace GDGame
             rigidBody.UseGravity =
                 false;
 
-            floor.IsStatic = true;
+            floorPhysics.IsStatic = true;
 
-            // ADD TO SCENE
-
-            _sceneManager.ActiveScene.Add(floor);
+            _sceneManager.ActiveScene.Add(floorPhysics);
         }
         private void InitializeZone1Room()
         {
@@ -890,7 +923,7 @@ namespace GDGame
             // PARENT: physics + movement (feet at y = 0 here)
             var parentGO = new GameObject(AppData.CAMERA_NAME_FIRST_PERSON_PARENT);
             parentGO.Layer = LayerMask.IgnoreRaycast;
-            parentGO.Transform.TranslateTo(new Vector3(0f, 3f, 4f)); //spawn point inside zone1
+            parentGO.Transform.TranslateTo(new Vector3(0f, 4f, 4f)); //spawn point inside zone1
 
             // Capsule + rigidbody controller (kept upright internally)
             var fpsController = parentGO.AddComponent<FirstPersonCapsuleController>();

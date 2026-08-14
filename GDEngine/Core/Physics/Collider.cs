@@ -222,13 +222,11 @@ namespace GDEngine.Core.Components
         #region Methods
         internal override TypedIndex CreateShape(Simulation simulation)
         {
-            // BepuPhysics Box uses half-extents
-            var halfExtents = HalfSize;
-
+            // Bepu Box expects FULL width, height and length.
             var box = new Box(
-                halfExtents.X,
-                halfExtents.Y,
-                halfExtents.Z
+                Size.X,
+                Size.Y,
+                Size.Z
             );
 
             return simulation.Shapes.Add(box);
@@ -236,16 +234,13 @@ namespace GDEngine.Core.Components
 
         internal override BodyInertia CalculateInertia(float mass)
         {
-            // BepuPhysics Box uses half-extents
-            var halfExtents = HalfSize;
-
+            // Use the same full dimensions for inertia calculation.
             var box = new Box(
-                halfExtents.X,
-                halfExtents.Y,
-                halfExtents.Z
+                Size.X,
+                Size.Y,
+                Size.Z
             );
 
-            // Calculate inertia tensor for a box
             return box.ComputeInertia(mass);
         }
 
