@@ -60,6 +60,7 @@ namespace GDEngine.Core.Managers
         private bool _built;
         private bool _menuVisible;
         private KeyboardState _newKBState;
+        private KeyboardState _oldKBState;
         private SceneManager _sceneManager;
         private Texture2D? _mainPanelBackground;
         private Texture2D? _audioPanelBackground;

@@ -120,7 +120,7 @@ namespace GDGame
             InitializeZone1();
             #endregion
 
-        #endregion
+        
 
             // Mouse reticle
             InitializeUI();
@@ -478,31 +478,6 @@ namespace GDGame
             camera.Viewport = viewport; // new Viewport(0, 0, 400, 300);
 
             _sceneManager.ActiveScene.Add(pipCameraGO);
-        }
-
-        private void InitializeAnimationCurves()
-        {
-            //1D animation curve demo (e.g. scale, audio volume, lerp factor for color, etc)
-            _animationCurve = new AnimationCurve(CurveLoopType.Cycle);
-            _animationCurve.AddKey(0f, 10);
-            _animationCurve.AddKey(2f, 11); //up
-            _animationCurve.AddKey(0f, 12); //down
-            _animationCurve.AddKey(8f, 13); //up further
-            _animationCurve.AddKey(0f, 13.5f); //down
-
-            //3D animation curve demo
-            _animationPositionCurve = new AnimationCurve3D(CurveLoopType.Oscillate);
-            _animationPositionCurve.AddKey(new Vector3(0, 4, 0), 0);
-            _animationPositionCurve.AddKey(new Vector3(5, 8, 2), 1);
-            _animationPositionCurve.AddKey(new Vector3(10, 12, 4), 2);
-            _animationPositionCurve.AddKey(new Vector3(0, 4, 0), 3);
-
-            // Absolute yaw/pitch/roll angles (radians) over time
-            _animationRotationCurve = new AnimationCurve3D(CurveLoopType.Oscillate);
-            _animationRotationCurve.AddKey(new Vector3(0, 0, 0), 0);              // yaw, pitch, roll
-            _animationRotationCurve.AddKey(new Vector3(0, MathHelper.PiOver2, 0), 1);
-            _animationRotationCurve.AddKey(new Vector3(0, MathHelper.Pi, 0), 2);
-            _animationRotationCurve.AddKey(new Vector3(0, 0, 0), 3);
         }
 
         private void InitializeGraphics(Integer2 resolution)
