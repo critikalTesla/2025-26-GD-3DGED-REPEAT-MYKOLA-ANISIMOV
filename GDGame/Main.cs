@@ -93,7 +93,7 @@ namespace GDGame
         protected override void Initialize()
         {
             #region Core
-            Window.Title = "My personal Pain";
+            Window.Title = "Zone 1";
             InitializeGraphics(ScreenResolution.R_WXGA_16_10_1280x800);
             InitializeMouse();
             InitializeContext();
@@ -132,6 +132,10 @@ namespace GDGame
 
             // Set the active scene
             _sceneManager.SetActiveScene(AppData.LEVEL_1_NAME);
+            _sceneManager.Paused = false;
+
+            _sceneManager.ActiveScene.GetSystem<PhysicsSystem>()?
+                                     .SetPaused(false);
 
             base.Initialize();
         }
@@ -182,6 +186,50 @@ namespace GDGame
             InitializeZone1Monkeys();
             InitializeZone1Button();
         }
+        private void InitializeZone1Floor(
+                        float roomWidth,
+                        float roomLength)
+        {
+            GameObject floor =
+                new GameObject("Zone1 Floor");
+
+            // Position centre of collider below Y=0.
+            floor.Transform.TranslateTo(
+                new Vector3(0f, -0.25f, 0f));
+
+            // COLLIDER
+
+            var collider =
+                floor.AddComponent<BoxCollider>();
+
+            collider.Size =
+                new Vector3(
+                    roomWidth,
+                    0.5f,
+                    roomLength);
+
+            collider.Center =
+                Vector3.Zero;
+
+            collider.IsTrigger = false;
+
+            // RIGID BODY
+
+            var rigidBody =
+                floor.AddComponent<RigidBody>();
+
+            rigidBody.BodyType =
+                BodyType.Static;
+
+            rigidBody.UseGravity =
+                false;
+
+            floor.IsStatic = true;
+
+            // ADD TO SCENE
+
+            _sceneManager.ActiveScene.Add(floor);
+        }
         private void InitializeZone1Room()
         {
             const float roomWidth = 12f;
@@ -190,11 +238,7 @@ namespace GDGame
             const float wallThickness = 0.2f;
 
             // Floor
-            CreateZone1StaticBox(
-                "Zone1 Floor",
-                new Vector3(0f, -0.1f, 0f),
-                new Vector3(100f, 0.2f, 100f),
-                Vector3.Zero);
+            InitializeZone1Floor(roomWidth, roomLength);
 
             // North wall
             CreateZone1StaticBox(
@@ -846,7 +890,7 @@ namespace GDGame
             // PARENT: physics + movement (feet at y = 0 here)
             var parentGO = new GameObject(AppData.CAMERA_NAME_FIRST_PERSON_PARENT);
             parentGO.Layer = LayerMask.IgnoreRaycast;
-            parentGO.Transform.TranslateTo(new Vector3(0f, 0.1f, 4f)); //spawn point inside zone1
+            parentGO.Transform.TranslateTo(new Vector3(0f, 3f, 4f)); //spawn point inside zone1
 
             // Capsule + rigidbody controller (kept upright internally)
             var fpsController = parentGO.AddComponent<FirstPersonCapsuleController>();

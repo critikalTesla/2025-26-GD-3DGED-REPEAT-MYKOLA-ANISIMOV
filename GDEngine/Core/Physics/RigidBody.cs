@@ -429,12 +429,19 @@ namespace GDEngine.Core.Components
 
             _physicsSystem.RegisterBody(this);
         }
-
+        //not working test
         protected override void Start()
         {
-            // Add to simulation after all components are awake
+            System.Diagnostics.Debug.WriteLine(
+                $"RigidBody START: {GameObject?.Name}");
+
             AddToSimulation();
+
+            System.Diagnostics.Debug.WriteLine(
+                $"RigidBody ADDED: {GameObject?.Name}, " +
+                $"StaticHandle={StaticHandle}");
         }
+
 
         protected override void OnDestroy()
         {
