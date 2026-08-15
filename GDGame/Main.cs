@@ -312,7 +312,7 @@ namespace GDGame
         {
             GameObject table = InitializeModel(
                 new Vector3(0f, 0f, 0f),
-                Vector3.Zero,
+                new Vector3(-90f, 0f, 0f),
                 new Vector3(1f, 1f, 1f),
                 "TableTexture",
                 Zone1TableModel,
@@ -340,8 +340,8 @@ namespace GDGame
         private void InitializeZone1Ramp()
         {
             GameObject ramp = InitializeModel(
-                new Vector3(0f, 2.65f, 0f),
-                new Vector3(-15f, 0f, 0f),
+                new Vector3(0f, 2.6f, 0f),
+                new Vector3(-30f, -15f, 0f),
                 new Vector3(1f, 1f, 1f),
                 Zone1Texture,
                 Zone1RampModel,
@@ -351,8 +351,9 @@ namespace GDGame
 
             collider.Size = new Vector3(
                 1.5f,
-                0.3f,
+                3f,
                 4f);
+
 
             collider.Center = Vector3.Zero;
 
@@ -362,6 +363,8 @@ namespace GDGame
             rigidBody.UseGravity = false;
 
             ramp.IsStatic = true;
+
+        
         }
         private GameObject CreateZone1Monkey(
                 string name,
@@ -401,19 +404,19 @@ namespace GDGame
         {
             const float monkeyScale = 0.9f;
 
-            // Monkey 1 - already on the table/ramp
+            // Monkey 1 - Above the ramp1
             _zone1Sphere1 = CreateZone1Monkey(
                 "Zone1 Monkey1",
-                new Vector3(0f, 2.95f, 1.4f),
+                new Vector3(0f, 12f, 1.3f),
                 monkeyScale,
                 BodyType.Dynamic,
                 true,
                 out _zone1Sphere1Body);
 
-            // Monkey 2 - suspended above the ramp
+            // Monkey - above the ramp2
             _zone1Sphere2 = CreateZone1Monkey(
-                "Zone1 Monkey2",
-                new Vector3(0f, 4.5f, -1.3f),
+                "Zone1 Monkey",
+                new Vector3(0f, 9f, 1.3f),
                 monkeyScale,
                 BodyType.Kinematic,
                 false,
