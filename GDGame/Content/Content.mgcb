@@ -303,6 +303,30 @@
 /processorParam:Quality=Best
 /build:Assets/Sounds/UI/SFX_UI_Click_Designed_Pop_Negative_Close_1.wav
 
+#begin Assets/Sounds/Zone2/MusicActive.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Assets/Sounds/Zone2/MusicActive.wav;Assets/Sounds/Zone2/MusicActive
+
+#begin Assets/Sounds/Zone2/MusicCalm.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Assets/Sounds/Zone2/MusicCalm.wav;Assets/Sounds/Zone2/MusicCalm
+
+#begin Assets/Sounds/Zone2/SpatialLeft.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Assets/Sounds/Zone2/SpatialLeft.wav;Assets/Sounds/Zone2/SpatialLeft
+
+#begin Assets/Sounds/Zone2/SpatialRight.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Assets/Sounds/Zone2/SpatialRight.wav;Assets/Sounds/Zone2/SpatialRight
+
 #begin Assets/Textures/Architecture/tabletexture2.png
 /importer:TextureImporter
 /processor:TextureProcessor

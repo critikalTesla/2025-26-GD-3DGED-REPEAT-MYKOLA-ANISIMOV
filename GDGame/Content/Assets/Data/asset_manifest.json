@@ -156,6 +156,22 @@
   ],
   "sounds": [
     {
+      "name": "zone2_spatial_left",
+      "contentPath": "assets/sounds/zone2/SpatialLeft"
+    },
+    {
+      "name": "zone2_spatial_right",
+      "contentPath": "assets/sounds/zone2/SpatialRight"
+    },
+    {
+      "name": "zone2_music_calm",
+      "contentPath": "assets/sounds/zone2/MusicCalm"
+    },
+    {
+      "name": "zone2_music_active",
+      "contentPath": "assets/sounds/zone2/MusicActive"
+    },
+    {
       "name": "explosion1",
       "contentPath": "assets/sounds/Explosion 1"
     },

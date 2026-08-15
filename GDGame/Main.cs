@@ -33,6 +33,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using SharpDX.Direct2D1.Effects;
 using Color = Microsoft.Xna.Framework.Color;
+using GDGame.Zone2;
 
 namespace GDGame
 {
@@ -79,6 +80,40 @@ namespace GDGame
         private const float Zone1InteractionDistance = 2.5f;
 
         #endregion
+        #region Zone 2 Fields
+
+        private const float Zone2CenterX = 12f;
+
+        private GameObject _zone2AudioButton;
+
+        private KeyboardState _zone2PreviousKeyboardState;
+
+        private bool _zone2MusicChanged;
+
+        private IDisposable _zone2MusicEventSubscription;
+
+
+        // Spatial source transforms
+        private GameObject _zone2SourceLeft;
+        private GameObject _zone2SourceRight;
+
+
+        // Looping spatial audio instances
+        private SoundEffectInstance _zone2LeftInstance;
+        private SoundEffectInstance _zone2RightInstance;
+
+
+        // MonoGame 3D audio objects
+        private readonly AudioListener _zone2Listener =
+            new AudioListener();
+
+        private readonly AudioEmitter _zone2LeftEmitter =
+            new AudioEmitter();
+
+        private readonly AudioEmitter _zone2RightEmitter =
+            new AudioEmitter();
+
+        #endregion
         private SceneManager _sceneManager;
         private UIDebugInfo _debugRenderer;
 
@@ -119,9 +154,10 @@ namespace GDGame
             //Stop spawning player monkey object
             //InitializePlayer();
             InitializeZone1();
+            InitializeZone2();
             #endregion
 
-        
+
 
             // Mouse reticle
             InitializeUI();
@@ -496,6 +532,443 @@ namespace GDGame
             System.Diagnostics.Debug.WriteLine(
                 "Zone 1 activated: Sphere2 released.");
         }
+
+        private void InitializeZone2()
+        {
+            _zone2PreviousKeyboardState =
+                Keyboard.GetState();
+
+            _zone2MusicChanged = false;
+
+            InitializeZone2Room();
+
+            InitializeZone2AudioSources();
+
+            InitializeZone2Button();
+
+            InitializeZone2Events();
+
+            StartZone2    Music();
+        }
+        private void InitializeZone2Room()
+        {
+            const float roomWidth = 12f;
+            const float roomLength = 10f;
+            const float roomHeight = 4f;
+            const float wallThickness = 0.2f;
+
+            float centerX = Zone2CenterX;
+
+            // Floor
+
+            GameObject floor =
+                new GameObject("Zone2 Floor Physics");
+
+            floor.Transform.TranslateTo(
+                new Vector3(
+                    centerX,
+                    -0.25f,
+                    0f));
+
+            var floorCollider =
+                floor.AddComponent<BoxCollider>();
+
+            floorCollider.Size =
+                new Vector3(
+                    roomWidth,
+                    0.5f,
+                    roomLength);
+
+            floorCollider.Center =
+                Vector3.Zero;
+
+            floorCollider.IsTrigger =
+                false;
+
+            var floorBody =
+                floor.AddComponent<RigidBody>();
+
+            floorBody.BodyType =
+                BodyType.Static;
+
+            floorBody.UseGravity =
+                false;
+
+            floor.IsStatic = true;
+
+            _sceneManager.ActiveScene.Add(floor);
+
+            // VISUAL FLOOR
+
+            GameObject floorVisual =
+                new GameObject("Zone2 Floor Visual");
+
+            MeshFilter floorMesh =
+                MeshFilterFactory.CreateQuadGridTexturedLit(
+                    _graphics.GraphicsDevice,
+                    1,
+                    1,
+                    roomWidth,
+                    roomLength,
+                    4f,
+                    4f);
+
+            floorVisual.AddComponent(floorMesh);
+
+            MeshRenderer floorRenderer =
+                floorVisual.AddComponent<MeshRenderer>();
+
+            floorRenderer.Material =
+                _matBasicUnlitGround;
+
+            floorRenderer.Overrides.MainTexture =
+                _textureDictionary.Get(Zone1Texture);
+
+            floorVisual.Transform.RotateEulerBy(
+                new Vector3(
+                    MathHelper.ToRadians(-90f),
+                    0f,
+                    0f));
+
+            floorVisual.Transform.TranslateTo(
+                new Vector3(
+                    centerX,
+                    0.01f,
+                    0f));
+
+            _sceneManager.ActiveScene.Add(floorVisual);
+
+            // FRONT WALL
+
+            CreateZone2StaticBox(
+                "Zone2 Front Wall",
+                new Vector3(
+                    centerX,
+                    roomHeight / 2f,
+                    roomLength / 2f),
+                new Vector3(
+                    roomWidth,
+                    roomHeight,
+                    wallThickness));
+
+            // BACK WALL
+            CreateZone2StaticBox(
+                "Zone2 Back Wall",
+                new Vector3(
+                    centerX,
+                    roomHeight / 2f,
+                    -roomLength / 2f),
+                new Vector3(
+                    roomWidth,
+                    roomHeight,
+                    wallThickness));
+
+            // RIGHT WALL
+
+            CreateZone2StaticBox(
+                "Zone2 Right Wall",
+                new Vector3(
+                    centerX + roomWidth / 2f,
+                    roomHeight / 2f,
+                    0f),
+                new Vector3(
+                    wallThickness,
+                    roomHeight,
+                    roomLength));
+        }
+        private GameObject CreateZone2StaticBox(
+                            string name,
+                            Vector3 position,
+                            Vector3 size)
+        {
+            GameObject gameObject =
+                InitializeModel(
+                    position,
+                    Vector3.Zero,
+                    size,
+                    Zone1Texture,
+                    Zone1CubeModel,
+                    name);
+
+            var collider =
+                gameObject.AddComponent<BoxCollider>();
+
+            collider.Size = size;
+            collider.Center = Vector3.Zero;
+
+            var rigidBody =
+                gameObject.AddComponent<RigidBody>();
+
+            rigidBody.BodyType =
+                BodyType.Static;
+
+            rigidBody.UseGravity =
+                false;
+
+            gameObject.IsStatic = true;
+
+            return gameObject;
+        }
+        private void InitializeZone2AudioSources()
+        {
+            // =========================================
+            // LEFT AUDIO SOURCE
+            // =========================================
+
+            _zone2SourceLeft =
+                InitializeModel(
+                    new Vector3(
+                        Zone2CenterX - 4f,
+                        1.5f,
+                        -2f),
+                    Vector3.Zero,
+                    Vector3.One,
+                    "mona lisa",
+                    Zone1MonkeyModel,
+                    "Zone2 Spatial Source Left");
+
+
+            // =========================================
+            // RIGHT AUDIO SOURCE
+            // =========================================
+
+            _zone2SourceRight =
+                InitializeModel(
+                    new Vector3(
+                        Zone2CenterX + 4f,
+                        1.5f,
+                        -2f),
+                    Vector3.Zero,
+                    Vector3.One,
+                    "mona lisa",
+                    Zone1MonkeyModel,
+                    "Zone2 Spatial Source Right");
+
+
+            // =========================================
+            // SOUND INSTANCES
+            // =========================================
+
+            SoundEffect leftSound =
+                _soundDictionary.Get(
+                    "zone2_spatial_left");
+
+            SoundEffect rightSound =
+                _soundDictionary.Get(
+                    "zone2_spatial_right");
+
+
+            _zone2LeftInstance =
+                leftSound.CreateInstance();
+
+            _zone2RightInstance =
+                rightSound.CreateInstance();
+
+
+            _zone2LeftInstance.IsLooped = true;
+            _zone2RightInstance.IsLooped = true;
+
+
+            _zone2LeftInstance.Volume = 0.7f;
+            _zone2RightInstance.Volume = 0.7f;
+
+
+            _zone2LeftInstance.Play();
+            _zone2RightInstance.Play();
+        }
+        private void InitializeZone2Button()
+        {
+            _zone2AudioButton =
+                CreateZone2StaticBox(
+                    "Zone2 Audio Button",
+                    new Vector3(
+                        Zone2CenterX,
+                        0.6f,
+                        2.5f),
+                    new Vector3(
+                        1.2f,
+                        1.2f,
+                        1.2f));
+        }
+        private void InitializeZone2Events()
+        {
+            _zone2MusicEventSubscription =
+                EngineContext.Instance.Events
+                    .Subscribe<Zone2MusicSwitchEvent>(
+                        OnZone2MusicSwitch);
+        }
+        private void OnZone2MusicSwitch(
+                     Zone2MusicSwitchEvent evt)
+        {
+            if (_zone2MusicChanged)
+                return;
+
+            _zone2MusicChanged = true;
+
+
+            // Publish through the EventBus.
+            //
+            // AudioSystem is already subscribed to
+            // PlayMusicEvent.
+
+            EngineContext.Instance.Events.Publish(
+                new PlayMusicEvent(
+                    "zone2_music_active",
+                    0.6f,
+                    1.5f));
+        }
+        private void StartZone2Music()
+        {
+            EngineContext.Instance.Events.Publish(
+                new PlayMusicEvent(
+                    "zone2_music_calm",
+                    0.5f,
+                    0f));
+        }
+        private void UpdateZone2SpatialAudio()
+        {
+            if (_zone2LeftInstance == null ||
+                _zone2RightInstance == null)
+                return;
+
+            if (_sceneManager.ActiveScene.ActiveCamera == null)
+                return;
+
+
+            // =========================================
+            // LISTENER = ACTIVE CAMERA / PLAYER
+            // =========================================
+
+            Transform cameraTransform =
+                _sceneManager.ActiveScene
+                    .ActiveCamera
+                    .Transform;
+
+            _zone2Listener.Position =
+                cameraTransform.Position;
+
+            _zone2Listener.Forward =
+                cameraTransform.Forward;
+
+            _zone2Listener.Up =
+                cameraTransform.Up;
+
+            _zone2Listener.Velocity =
+                Vector3.Zero;
+
+
+            // =========================================
+            // LEFT SOURCE
+            // =========================================
+
+            _zone2LeftEmitter.Position =
+                _zone2SourceLeft.Transform.Position;
+
+            _zone2LeftEmitter.Forward =
+                _zone2SourceLeft.Transform.Forward;
+
+            _zone2LeftEmitter.Up =
+                _zone2SourceLeft.Transform.Up;
+
+            _zone2LeftEmitter.Velocity =
+                Vector3.Zero;
+
+
+            // =========================================
+            // RIGHT SOURCE
+            // =========================================
+
+            _zone2RightEmitter.Position =
+                _zone2SourceRight.Transform.Position;
+
+            _zone2RightEmitter.Forward =
+                _zone2SourceRight.Transform.Forward;
+
+            _zone2RightEmitter.Up =
+                _zone2SourceRight.Transform.Up;
+
+            _zone2RightEmitter.Velocity =
+                Vector3.Zero;
+
+
+            // Recalculate 3D panning + attenuation
+            // EVERY FRAME.
+
+            _zone2LeftInstance.Apply3D(
+                _zone2Listener,
+                _zone2LeftEmitter);
+
+            _zone2RightInstance.Apply3D(
+                _zone2Listener,
+                _zone2RightEmitter);
+        }
+        private void UpdateZone2Interaction()
+        {
+            if (_zone2AudioButton == null)
+                return;
+
+
+            KeyboardState currentKeyboardState =
+                Keyboard.GetState();
+
+
+            GameObject player =
+                _sceneManager.ActiveScene.Find(
+                    gameObject =>
+                        gameObject.Name ==
+                        AppData.CAMERA_NAME_FIRST_PERSON_PARENT);
+
+
+            if (player == null)
+            {
+                _zone2PreviousKeyboardState =
+                    currentKeyboardState;
+
+                return;
+            }
+
+
+            float distance =
+                Vector3.Distance(
+                    player.Transform.Position,
+                    _zone2AudioButton.Transform.Position);
+
+
+            bool ePressed =
+                currentKeyboardState.IsKeyDown(Keys.E) &&
+                _zone2PreviousKeyboardState.IsKeyUp(Keys.E);
+
+
+            if (distance <= 2.5f &&
+                ePressed)
+            {
+                // =====================================
+                // REQUIREMENT 3:
+                // SFX via EventBus
+                // =====================================
+
+                EngineContext.Instance.Events.Publish(
+                    new PlaySfxEvent(
+                        "SFX_UI_Click_Designed_Pop_Generic_1",
+                        1f,
+                        false));
+
+
+                // =====================================
+                // REQUIREMENT 2:
+                // Named scene event
+                // =====================================
+
+                EngineContext.Instance.Events.Publish(
+                    new Zone2MusicSwitchEvent());
+            }
+
+
+            _zone2PreviousKeyboardState =
+                currentKeyboardState;
+        }
+
+
 
         private void SetPauseShowMenu()
         {
@@ -1194,6 +1667,9 @@ namespace GDGame
 
             UpdateZone1Interaction();
 
+            UpdateZone2SpatialAudio();
+            UpdateZone2Interaction();
+
             base.Update(gameTime);
         }
 
@@ -1247,6 +1723,17 @@ namespace GDGame
                 _fontDictionary?.Dispose();
                 _fontDictionary = null;
 
+                _zone2LeftInstance?.Stop();
+                _zone2LeftInstance?.Dispose();
+                _zone2LeftInstance = null;
+
+                _zone2RightInstance?.Stop();
+                _zone2RightInstance?.Dispose();
+                _zone2RightInstance = null;
+
+                _zone2MusicEventSubscription?.Dispose();
+                _zone2MusicEventSubscription = null;
+
                 // 4. Dispose EngineContext (which owns SpriteBatch and Content)
                 System.Diagnostics.Debug.WriteLine("Disposing EngineContext");
                 EngineContext.Instance?.Dispose();
@@ -1255,6 +1742,7 @@ namespace GDGame
                 System.Diagnostics.Debug.WriteLine("Clearing References");
 
                 System.Diagnostics.Debug.WriteLine("Main disposal complete");
+
             }
 
             _disposed = true;

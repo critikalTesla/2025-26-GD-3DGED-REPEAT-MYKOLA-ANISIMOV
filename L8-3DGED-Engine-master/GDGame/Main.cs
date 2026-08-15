@@ -888,6 +888,8 @@ namespace GDGame
             //call time update
             Time.Update(gameTime);
             UpdateZone1Interaction();
+            UpdateZone2SpatialAudio();
+            UpdateZone2Interaction();
             base.Update(gameTime);
         }
 
@@ -913,7 +915,19 @@ namespace GDGame
 
             if (disposing)
             {
+
                 System.Diagnostics.Debug.WriteLine("Disposing Main...");
+
+                _zone2LeftInstance?.Stop();
+                _zone2LeftInstance?.Dispose();
+                _zone2LeftInstance = null;
+
+                _zone2RightInstance?.Stop();
+                _zone2RightInstance?.Dispose();
+                _zone2RightInstance = null;
+
+                _zone2MusicEventSubscription?.Dispose();
+                _zone2MusicEventSubscription = null;
 
                 // 1. Dispose Materials (which may own Effects)
                 System.Diagnostics.Debug.WriteLine("Disposing Materials");
