@@ -421,18 +421,24 @@ namespace GDEngine.Core.Components.Controllers.Physics
         /// </summary>
         private void ConstrainUpright()
         {
-            if (_rigidBody == null)
-            {
+            if (_rigidBody == null || Transform == null)
                 return;
-            }
 
+            // Do not allow physics to rotate player around X or Z
             Vector3 angularVelocity = _rigidBody.AngularVelocity;
-
-            // Only allow spin around Y if any; remove pitch/roll.
             angularVelocity.X = 0.0f;
             angularVelocity.Z = 0.0f;
-
             _rigidBody.AngularVelocity = angularVelocity;
+
+            // Keep player/capsule upright.
+            // Preserve only Y rotation.
+            Vector3 currentEuler = Transform.RotationEuler;
+
+            Transform.RotateEulerTo(
+                new Vector3(
+                    0.0f,
+                    currentEuler.Y,
+                    0.0f));
         }
         #endregion
 

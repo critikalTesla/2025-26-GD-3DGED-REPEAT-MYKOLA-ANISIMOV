@@ -541,14 +541,11 @@ namespace GDGame
             _zone2MusicChanged = false;
 
             InitializeZone2Room();
-
             InitializeZone2AudioSources();
-
             InitializeZone2Button();
-
             InitializeZone2Events();
 
-            StartZone2    Music();
+            StartZone2Music();
         }
         private void InitializeZone2Room()
         {
