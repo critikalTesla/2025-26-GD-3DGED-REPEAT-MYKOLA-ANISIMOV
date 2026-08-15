@@ -242,6 +242,12 @@ namespace GDEngine.Core.Components.Controllers.Physics
             _rigidBody.UseGravity = true;
             _rigidBody.LinearDamping = 0.0f;
             _rigidBody.AngularDamping = 0.0f;
+
+            // FPS capsule must never rotate from collisions.
+            _rigidBody.FreezeRotation = true;
+
+            //No starting angular velocity.
+            _rigidBody.AngularVelocity = Vector3.Zero;
         }
 
 
@@ -252,17 +258,19 @@ namespace GDEngine.Core.Components.Controllers.Physics
         private void UpdateCapsuleShape()
         {
             if (_capsule == null)
-            {
                 return;
-            }
 
             _capsule.Radius = _capsuleRadius;
             _capsule.Height = _capsuleHeight;
 
-            // Position the capsule so that the bottom of the lower sphere is at y = 0
-            // relative to the player origin (feet at Transform.Position).
-            float centerY = _capsuleHeight * 0.5f - _capsuleRadius;
-            _capsule.Center = new Vector3(0.0f, centerY, 0.0f);
+            // Transform.Position represents the player's FEET.
+            // The capsule's centre must therefore be half its TOTAL height above the feet.
+            float centerY = _capsuleHeight * 0.5f;
+
+            _capsule.Center = new Vector3(
+                0.0f,
+                centerY,
+                0.0f);
         }
 
         /// <summary>
@@ -306,16 +314,35 @@ namespace GDEngine.Core.Components.Controllers.Physics
         {
             _isGrounded = false;
 
-            if (_physicsSystem == null || Transform == null)
+            if (_physicsSystem == null ||
+                Transform == null ||
+                _capsule == null)
             {
                 return;
             }
 
-            // Cast a short ray straight down from just above the feet.
-            Vector3 origin = Transform.Position + Vector3.Up * 0.05f;
-            Vector3 direction = -Vector3.Up;
+            // Transform.Position = centre of physical capsule.
+            //
+            // Find the bottom of the capsule.
+            float halfHeight = _capsuleHeight * 0.5f;
 
-            if (_physicsSystem.Raycast(origin, direction, _groundCheckDistance, out RaycastHit hit))
+            Vector3 feetPosition =
+                Transform.Position -
+                Vector3.Up * halfHeight;
+
+            // Start slightly ABOVE the bottom of the capsule.
+            Vector3 rayOrigin =
+                feetPosition +
+                Vector3.Up * 0.10f;
+
+            // Check slightly below the feet.
+            float rayDistance = 0.25f;
+
+            if (_physicsSystem.Raycast(
+                rayOrigin,
+                Vector3.Down,
+                rayDistance,
+                out RaycastHit hit))
             {
                 _isGrounded = true;
             }
@@ -421,24 +448,11 @@ namespace GDEngine.Core.Components.Controllers.Physics
         /// </summary>
         private void ConstrainUpright()
         {
-            if (_rigidBody == null || Transform == null)
+            if (_rigidBody == null)
                 return;
 
-            // Do not allow physics to rotate player around X or Z
-            Vector3 angularVelocity = _rigidBody.AngularVelocity;
-            angularVelocity.X = 0.0f;
-            angularVelocity.Z = 0.0f;
-            _rigidBody.AngularVelocity = angularVelocity;
-
-            // Keep player/capsule upright.
-            // Preserve only Y rotation.
-            Vector3 currentEuler = Transform.RotationEuler;
-
-            Transform.RotateEulerTo(
-                new Vector3(
-                    0.0f,
-                    currentEuler.Y,
-                    0.0f));
+            _rigidBody.AngularVelocity =
+                Vector3.Zero;
         }
         #endregion
 

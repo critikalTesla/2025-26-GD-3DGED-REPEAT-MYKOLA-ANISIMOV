@@ -1396,7 +1396,7 @@ namespace GDGame
             // PARENT: physics + movement (feet at y = 0 here)
             var parentGO = new GameObject(AppData.CAMERA_NAME_FIRST_PERSON_PARENT);
             parentGO.Layer = LayerMask.IgnoreRaycast;
-            parentGO.Transform.TranslateTo(new Vector3(0f, 4f, 4f)); //spawn point inside zone1
+            parentGO.Transform.TranslateTo(new Vector3(0f, 1.5f, 4f)); //spawn point inside zone1
 
             // Capsule + rigidbody controller (kept upright internally)
             var fpsController = parentGO.AddComponent<FirstPersonCapsuleController>();
@@ -1413,7 +1413,7 @@ namespace GDGame
             cameraGO.Transform.SetParent(parentGO.Transform);
 
             // Local offset from feet → eye height
-            cameraGO.Transform.TranslateTo(new Vector3(0, 1.6f, 0));
+            cameraGO.Transform.TranslateTo(new Vector3(0, 1f, 0));
             camera = cameraGO.AddComponent<Camera>();
             camera.FieldOfView = MathHelper.ToRadians(80.0f);
             var mouseLook = cameraGO.AddComponent<MouseYawPitchController>();

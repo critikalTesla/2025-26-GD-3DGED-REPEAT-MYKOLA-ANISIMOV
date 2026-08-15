@@ -84,6 +84,8 @@ namespace GDEngine.Core.Components
 
         private bool _disposed = false;
         private float maximumSpeculativeMargin = 0.005f;
+        //freeze rotation
+        private bool _freezeRotation = false;
         #endregion
 
         #region Properties
@@ -409,6 +411,35 @@ namespace GDEngine.Core.Components
                 _suppressTransformSync = false;
             }
         }
+        public bool FreezeRotation
+        {
+            get => _freezeRotation;
+
+            set
+            {
+                _freezeRotation = value;
+
+                if (_bodyType == BodyType.Dynamic &&
+                    _bodyHandle.HasValue &&
+                    _physicsSystem != null)
+                {
+                    UpdateInertia();
+
+                    if (_freezeRotation)
+                    {
+                        var bodyRef =
+                            _physicsSystem.Simulation.Bodies
+                                .GetBodyReference(_bodyHandle.Value);
+
+                        bodyRef.Velocity.Angular =
+                            System.Numerics.Vector3.Zero;
+
+                        _angularVelocity =
+                            Microsoft.Xna.Framework.Vector3.Zero;
+                    }
+                }
+            }
+        }
         #endregion
 
         #region Lifecycle Methods
@@ -493,7 +524,24 @@ namespace GDEngine.Core.Components
             // 4. Dynamic body
             if (_bodyType == BodyType.Dynamic)
             {
-                var inertia = _collider.CalculateInertia(_mass);
+                //changing inertia properties
+                BodyInertia inertia;
+
+                if (_freezeRotation)
+                {
+                    inertia =
+                        new BodyInertia
+                        {
+                            InverseMass = 1.0f / _mass,
+                            InverseInertiaTensor =
+                                new BepuUtilities.Symmetric3x3()
+                        };
+                }
+                else
+                {
+                    inertia =
+                        _collider.CalculateInertia(_mass);
+                }
 
                 var bodyDescription = BodyDescription.CreateDynamic(
                     pose,
@@ -542,11 +590,40 @@ namespace GDEngine.Core.Components
 
         private void UpdateInertia()
         {
-            if (_bodyType != BodyType.Dynamic || !_bodyHandle.HasValue || _physicsSystem == null || _collider == null)
+            if (_bodyType != BodyType.Dynamic ||
+                !_bodyHandle.HasValue ||
+                _physicsSystem == null ||
+                _collider == null)
                 return;
 
-            var bodyRef = _physicsSystem.Simulation.Bodies.GetBodyReference(_bodyHandle.Value);
-            bodyRef.LocalInertia = _collider.CalculateInertia(_mass);
+            var bodyRef =
+                _physicsSystem.Simulation.Bodies
+                    .GetBodyReference(_bodyHandle.Value);
+
+            if (_freezeRotation)
+            {
+                // Infinite rotational inertia:
+                // collisions may move the body,
+                // but cannot rotate it.
+                bodyRef.LocalInertia =
+                    new BodyInertia
+                    {
+                        InverseMass = 1.0f / _mass,
+                        InverseInertiaTensor =
+                            new BepuUtilities.Symmetric3x3()
+                    };
+
+                bodyRef.Velocity.Angular =
+                    System.Numerics.Vector3.Zero;
+
+                _angularVelocity =
+                    Microsoft.Xna.Framework.Vector3.Zero;
+            }
+            else
+            {
+                bodyRef.LocalInertia =
+                    _collider.CalculateInertia(_mass);
+            }
         }
 
         public void Dispose()
