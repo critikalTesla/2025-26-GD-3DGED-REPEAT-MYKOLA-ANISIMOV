@@ -247,82 +247,82 @@ namespace GDGame
             InitializeZone1Button();
         }
         private void InitializeZone1Floor(
-    float roomWidth,
-    float roomLength)
-        {
-           //Texture and model
-            GameObject floorVisual =
-                new GameObject("Zone1 Floor Visual");
+                float roomWidth,
+                float roomLength)
+                    {
+                       //Texture and model
+                        GameObject floorVisual =
+                            new GameObject("Zone1 Floor Visual");
 
-            // Create a flat rectangular mesh.
-            MeshFilter floorMesh =
-                MeshFilterFactory.CreateQuadGridTexturedLit(
-                    _graphics.GraphicsDevice,
-                    1,
-                    1,
-                    roomWidth,
-                    roomLength,
-                    4f,
-                    4f);
+                        // Create a flat rectangular mesh.
+                        MeshFilter floorMesh =
+                            MeshFilterFactory.CreateQuadGridTexturedLit(
+                                _graphics.GraphicsDevice,
+                                1,
+                                1,
+                                roomWidth,
+                                roomLength,
+                                4f,
+                                4f);
 
-            floorVisual.AddComponent(floorMesh);
+                        floorVisual.AddComponent(floorMesh);
 
-            MeshRenderer floorRenderer =
-                floorVisual.AddComponent<MeshRenderer>();
+                        MeshRenderer floorRenderer =
+                            floorVisual.AddComponent<MeshRenderer>();
 
-            floorRenderer.Material =
-                _matBasicUnlitGround;
+                        floorRenderer.Material =
+                            _matBasicUnlitGround;
 
-            floorRenderer.Overrides.MainTexture =
-                _textureDictionary.Get(Zone1Texture);
+                        floorRenderer.Overrides.MainTexture =
+                            _textureDictionary.Get(Zone1Texture);
 
-            // The generated quad needs to lie horizontally.
-            floorVisual.Transform.RotateEulerBy(
-                new Vector3(
-                    MathHelper.ToRadians(-90f),
-                    0f,
-                    0f));
+                        // The generated quad needs to lie horizontally.
+                        floorVisual.Transform.RotateEulerBy(
+                            new Vector3(
+                                MathHelper.ToRadians(-90f),
+                                0f,
+                                0f));
 
-            // Slightly above the collider so there is no z-fighting.
-            floorVisual.Transform.TranslateTo(
-                new Vector3(0f, 0.01f, 0f));
+                        // Slightly above the collider so there is no z-fighting.
+                        floorVisual.Transform.TranslateTo(
+                            new Vector3(0f, 0.01f, 0f));
 
-            _sceneManager.ActiveScene.Add(floorVisual);
+                        _sceneManager.ActiveScene.Add(floorVisual);
 
-            // Phisics part
+                        // Phisics part
 
-            GameObject floorPhysics =
-                new GameObject("Zone1 Floor Physics");
+                        GameObject floorPhysics =
+                            new GameObject("Zone1 Floor Physics");
 
-            floorPhysics.Transform.TranslateTo(
-                new Vector3(0f, -0.25f, 0f));
+                        floorPhysics.Transform.TranslateTo(
+                            new Vector3(0f, -0.25f, 0f));
 
-            var collider =
-                floorPhysics.AddComponent<BoxCollider>();
+                        var collider =
+                            floorPhysics.AddComponent<BoxCollider>();
 
-            collider.Size =
-                new Vector3(
-                    roomWidth,
-                    0.5f,
-                    roomLength);
+                        collider.Size =
+                            new Vector3(
+                                roomWidth,
+                                0.5f,
+                                roomLength);
 
-            collider.Center = Vector3.Zero;
+                        collider.Center = Vector3.Zero;
 
-            collider.IsTrigger = false;
+                        collider.IsTrigger = false;
 
-            var rigidBody =
-                floorPhysics.AddComponent<RigidBody>();
+                        var rigidBody =
+                            floorPhysics.AddComponent<RigidBody>();
 
-            rigidBody.BodyType =
-                BodyType.Static;
+                        rigidBody.BodyType =
+                            BodyType.Static;
 
-            rigidBody.UseGravity =
-                false;
+                        rigidBody.UseGravity =
+                            false;
 
-            floorPhysics.IsStatic = true;
+                        floorPhysics.IsStatic = true;
 
-            _sceneManager.ActiveScene.Add(floorPhysics);
-        }
+                        _sceneManager.ActiveScene.Add(floorPhysics);
+                    }
         private void InitializeZone1Room()
         {
             const float roomWidth = 12f;
@@ -355,18 +355,20 @@ namespace GDGame
                 Vector3.Zero);
 
             // Right wall
-            CreateZone1StaticBox(
-                "Zone1 East Wall",
-                new Vector3(roomWidth / 2f, roomHeight / 2f, 0f),
-                new Vector3(wallThickness, roomHeight, roomLength),
-                Vector3.Zero);
+            InitializeModel(
+                    new Vector3(
+                        roomWidth / 2f,
+                        roomHeight / 2f,
+                        0f),
+                    Vector3.Zero,
+                    new Vector3(
+                        wallThickness,
+                        roomHeight,
+                        roomLength),
+                    Zone1Texture,
+                    Zone1CubeModel,
+                        "Zone1 East Wall Visual");
 
-            // Door
-            CreateZone1StaticBox(
-                "Zone1 Door",
-                new Vector3(0f, 1.5f, -4.85f),
-                new Vector3(2f, 3f, 0.25f),
-                Vector3.Zero);
         }
         private void InitializeZone1Table()
         {
@@ -686,16 +688,19 @@ namespace GDGame
 
             // RIGHT WALL
 
-            CreateZone2StaticBox(
-                "Zone2 Right Wall",
+            InitializeModel(
                 new Vector3(
                     centerX + roomWidth / 2f,
                     roomHeight / 2f,
                     0f),
+                Vector3.Zero,
                 new Vector3(
                     wallThickness,
                     roomHeight,
-                    roomLength));
+                    roomLength),
+                Zone1Texture,
+                Zone1CubeModel,
+                "Zone2 Right Wall Visual");
         }
         private GameObject CreateZone2StaticBox(
                             string name,
@@ -752,7 +757,7 @@ namespace GDGame
                 InitializeModel(
                     new Vector3(
                         Zone2CenterX + 4f,
-                        5f,
+                        5 f,
                         -2f),
                     Vector3.Zero,
                     Vector3.One,
@@ -973,6 +978,8 @@ namespace GDGame
 
             InitializeZone3CameraTriggers();
 
+            InitializeZone3TriggerVisuals();
+
             InitializeZone3Events();
         }
         private void InitializeZone3Room()
@@ -1095,16 +1102,19 @@ namespace GDGame
 
             // RIGHT WALL
 
-            CreateZone3StaticBox(
-                "Zone3 Right Wall",
+            InitializeModel(
                 new Vector3(
                     centerX + roomWidth / 2f,
                     roomHeight / 2f,
                     0f),
+                Vector3.Zero,
                 new Vector3(
                     wallThickness,
                     roomHeight,
-                    roomLength));
+                    roomLength),
+                Zone1Texture,
+                Zone1CubeModel,
+                "Zone3 Right Wall Visual");
 
             // No full left wall because Zone 2 connects here.
         }
@@ -1438,52 +1448,41 @@ namespace GDGame
             System.Diagnostics.Debug.WriteLine(
                 $"Zone 3 Camera Mode: {mode}");
         }
-        #region temporary visible collision zones
-        //temporary visible collision zones, delete in the future
-        InitializeModel(
-            new Vector3(
-                Zone3CenterX - 3.5f,
-                1f,
-                2f),
-            Vector3.Zero,
-            new Vector3(
-                2f,
-                2f,
-                2f),
-            Zone1Texture,
-            Zone1CubeModel,
-            "First Person Camera Zone");
+        private void InitializeZone3TriggerVisuals()
+        {
+            InitializeModel(
+                new Vector3(
+                    Zone3CenterX - 3.5f,
+                    1f,
+                    2f),
+                Vector3.Zero,
+                new Vector3(2f),
+                Zone1Texture,
+                Zone1CubeModel,
+                "First Person Camera Zone");
 
+            InitializeModel(
+                new Vector3(
+                    Zone3CenterX,
+                    1f,
+                    0f),
+                Vector3.Zero,
+                new Vector3(2f),
+                Zone1Texture,
+                Zone1CubeModel,
+                "Orbit Camera Zone");
 
-        InitializeModel(
-            new Vector3(
-                Zone3CenterX,
-                1f,
-                0f),
-            Vector3.Zero,
-            new Vector3(
-                2f,
-                2f,
-                2f),
-            Zone1Texture,
-            Zone1CubeModel,
-            "Orbit Camera Zone");
-
-
-        InitializeModel(
-            new Vector3(
-                Zone3CenterX + 3.5f,
-                1f,
-                -2f),
-            Vector3.Zero,
-            new Vector3(
-                2f,
-                2f,
-                2f),
-            Zone1Texture,
-            Zone1CubeModel,
-            "Cinematic Camera Zone");
-            #endregion
+            InitializeModel(
+                new Vector3(
+                    Zone3CenterX + 3.5f,
+                    1f,
+                    -2f),
+                Vector3.Zero,
+                new Vector3(2f),
+                Zone1Texture,
+                Zone1CubeModel,
+                "Cinematic Camera Zone");
+        }
 
         private void SetPauseShowMenu()
         {
