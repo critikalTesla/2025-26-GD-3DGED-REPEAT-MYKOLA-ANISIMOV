@@ -367,7 +367,7 @@ namespace GDGame
                         roomLength),
                     Zone1Texture,
                     Zone1CubeModel,
-                        "Zone1 East Wall Visual");
+                        "Zone1 Right Wall Visual");
 
         }
         private void InitializeZone1Table()
