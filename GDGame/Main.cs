@@ -34,6 +34,7 @@ using Microsoft.Xna.Framework.Input;
 using SharpDX.Direct2D1.Effects;
 using Color = Microsoft.Xna.Framework.Color;
 using GDGame.Zone2;
+using GDGame.Zone3;
 
 namespace GDGame
 {
@@ -114,6 +115,28 @@ namespace GDGame
             new AudioEmitter();
 
         #endregion
+        #region Zone 3 Fields
+
+        private const float Zone3CenterX = 24f;
+
+        private GameObject _zone3FirstPersonTrigger;
+        private GameObject _zone3OrbitTrigger;
+        private GameObject _zone3CinematicTrigger;
+
+        private Camera _zone3FirstPersonCamera;
+        private Camera _zone3OrbitCamera;
+        private Camera _zone3CinematicCamera;
+
+        private GameObject _zone3OrbitCameraObject;
+        private GameObject _zone3CinematicCameraObject;
+
+        private IDisposable _zone3CameraEventSubscription;
+
+        private Zone3CameraMode _zone3CurrentMode =
+            Zone3CameraMode.FirstPerson;
+
+        #endregion
+
         private SceneManager _sceneManager;
         private UIDebugInfo _debugRenderer;
 
@@ -155,6 +178,7 @@ namespace GDGame
             //InitializePlayer();
             InitializeZone1();
             InitializeZone2();
+            InitializeZone3();
             #endregion
 
 
@@ -708,15 +732,13 @@ namespace GDGame
         }
         private void InitializeZone2AudioSources()
         {
-            // =========================================
             // LEFT AUDIO SOURCE
-            // =========================================
 
             _zone2SourceLeft =
                 InitializeModel(
                     new Vector3(
                         Zone2CenterX - 4f,
-                        1.5f,
+                        5f,
                         -2f),
                     Vector3.Zero,
                     Vector3.One,
@@ -724,16 +746,13 @@ namespace GDGame
                     Zone1MonkeyModel,
                     "Zone2 Spatial Source Left");
 
-
-            // =========================================
             // RIGHT AUDIO SOURCE
-            // =========================================
 
             _zone2SourceRight =
                 InitializeModel(
                     new Vector3(
                         Zone2CenterX + 4f,
-                        1.5f,
+                        5f,
                         -2f),
                     Vector3.Zero,
                     Vector3.One,
@@ -741,10 +760,7 @@ namespace GDGame
                     Zone1MonkeyModel,
                     "Zone2 Spatial Source Right");
 
-
-            // =========================================
             // SOUND INSTANCES
-            // =========================================
 
             SoundEffect leftSound =
                 _soundDictionary.Get(
@@ -831,10 +847,7 @@ namespace GDGame
             if (_sceneManager.ActiveScene.ActiveCamera == null)
                 return;
 
-
-            // =========================================
-            // LISTENER = ACTIVE CAMERA / PLAYER
-            // =========================================
+            // LISTENER = PLAYER
 
             Transform cameraTransform =
                 _sceneManager.ActiveScene
@@ -853,10 +866,7 @@ namespace GDGame
             _zone2Listener.Velocity =
                 Vector3.Zero;
 
-
-            // =========================================
             // LEFT SOURCE
-            // =========================================
 
             _zone2LeftEmitter.Position =
                 _zone2SourceLeft.Transform.Position;
@@ -870,10 +880,7 @@ namespace GDGame
             _zone2LeftEmitter.Velocity =
                 Vector3.Zero;
 
-
-            // =========================================
             // RIGHT SOURCE
-            // =========================================
 
             _zone2RightEmitter.Position =
                 _zone2SourceRight.Transform.Position;
@@ -939,10 +946,7 @@ namespace GDGame
             if (distance <= 2.5f &&
                 ePressed)
             {
-                // =====================================
-                // REQUIREMENT 3:
                 // SFX via EventBus
-                // =====================================
 
                 EngineContext.Instance.Events.Publish(
                     new PlaySfxEvent(
@@ -950,11 +954,7 @@ namespace GDGame
                         1f,
                         false));
 
-
-                // =====================================
-                // REQUIREMENT 2:
                 // Named scene event
-                // =====================================
 
                 EngineContext.Instance.Events.Publish(
                     new Zone2MusicSwitchEvent());
@@ -965,7 +965,525 @@ namespace GDGame
                 currentKeyboardState;
         }
 
+        private void InitializeZone3()
+        {
+            InitializeZone3Room();
 
+            InitializeZone3Cameras();
+
+            InitializeZone3CameraTriggers();
+
+            InitializeZone3Events();
+        }
+        private void InitializeZone3Room()
+        {
+            const float roomWidth = 12f;
+            const float roomLength = 10f;
+            const float roomHeight = 4f;
+            const float wallThickness = 0.2f;
+
+            float centerX = Zone3CenterX;
+
+            // FLOOR PHYSICS
+
+            GameObject floorPhysics =
+                new GameObject("Zone3 Floor Physics");
+
+            floorPhysics.Transform.TranslateTo(
+                new Vector3(
+                    centerX,
+                    -0.25f,
+                    0f));
+
+            var floorCollider =
+                floorPhysics.AddComponent<BoxCollider>();
+
+            floorCollider.Size =
+                new Vector3(
+                    roomWidth,
+                    0.5f,
+                    roomLength);
+
+            floorCollider.Center =
+                Vector3.Zero;
+
+            floorCollider.IsTrigger =
+                false;
+
+            var floorBody =
+                floorPhysics.AddComponent<RigidBody>();
+
+            floorBody.BodyType =
+                BodyType.Static;
+
+            floorBody.UseGravity =
+                false;
+
+            floorPhysics.IsStatic = true;
+
+            _sceneManager.ActiveScene.Add(
+                floorPhysics);
+
+            // FLOOR VISUAL
+
+            GameObject floorVisual =
+                new GameObject("Zone3 Floor Visual");
+
+            MeshFilter floorMesh =
+                MeshFilterFactory.CreateQuadGridTexturedLit(
+                    _graphics.GraphicsDevice,
+                    1,
+                    1,
+                    roomWidth,
+                    roomLength,
+                    4f,
+                    4f);
+
+            floorVisual.AddComponent(
+                floorMesh);
+
+            MeshRenderer floorRenderer =
+                floorVisual.AddComponent<MeshRenderer>();
+
+            floorRenderer.Material =
+                _matBasicUnlitGround;
+
+            floorRenderer.Overrides.MainTexture =
+                _textureDictionary.Get(
+                    Zone1Texture);
+
+            floorVisual.Transform.RotateEulerBy(
+                new Vector3(
+                    MathHelper.ToRadians(-90f),
+                    0f,
+                    0f));
+
+            floorVisual.Transform.TranslateTo(
+                new Vector3(
+                    centerX,
+                    0.01f,
+                    0f));
+
+            _sceneManager.ActiveScene.Add(
+                floorVisual);
+
+            // FRONT WALL
+
+            CreateZone3StaticBox(
+                "Zone3 Front Wall",
+                new Vector3(
+                    centerX,
+                    roomHeight / 2f,
+                    roomLength / 2f),
+                new Vector3(
+                    roomWidth,
+                    roomHeight,
+                    wallThickness));
+
+            // BACK WALL
+
+            CreateZone3StaticBox(
+                "Zone3 Back Wall",
+                new Vector3(
+                    centerX,
+                    roomHeight / 2f,
+                    -roomLength / 2f),
+                new Vector3(
+                    roomWidth,
+                    roomHeight,
+                    wallThickness));
+
+            // RIGHT WALL
+
+            CreateZone3StaticBox(
+                "Zone3 Right Wall",
+                new Vector3(
+                    centerX + roomWidth / 2f,
+                    roomHeight / 2f,
+                    0f),
+                new Vector3(
+                    wallThickness,
+                    roomHeight,
+                    roomLength));
+
+            // No full left wall because Zone 2 connects here.
+        }
+        private GameObject CreateZone3StaticBox(
+                    string name,
+                    Vector3 position,
+                    Vector3 size)
+        {
+            GameObject gameObject =
+                InitializeModel(
+                    position,
+                    Vector3.Zero,
+                    size,
+                    Zone1Texture,
+                    Zone1CubeModel,
+                    name);
+
+            var collider =
+                gameObject.AddComponent<BoxCollider>();
+
+            collider.Size =
+                size;
+
+            collider.Center =
+                Vector3.Zero;
+
+            var rigidBody =
+                gameObject.AddComponent<RigidBody>();
+
+            rigidBody.BodyType =
+                BodyType.Static;
+
+            rigidBody.UseGravity =
+                false;
+
+            gameObject.IsStatic =
+                true;
+
+            return gameObject;
+        }
+        private void InitializeZone3Cameras()
+        {
+            Scene scene =
+                _sceneManager.ActiveScene;
+
+            // 1. EXISTING FIRST-PERSON CAMERA
+
+            GameObject fpsCameraObject =
+                scene.Find(
+                    gameObject =>
+                        gameObject.Name ==
+                        AppData.CAMERA_NAME_FIRST_PERSON);
+
+            if (fpsCameraObject != null)
+            {
+                _zone3FirstPersonCamera =
+                    fpsCameraObject.GetComponent<Camera>();
+            }
+
+            // 2. ORBIT CAMERA
+
+            _zone3OrbitCameraObject =
+                new GameObject(
+                    "Zone3 Orbit Camera");
+
+            _zone3OrbitCameraObject
+                .Transform
+                .TranslateTo(
+                    new Vector3(
+                        Zone3CenterX,
+                        6f,
+                        8f));
+
+            _zone3OrbitCamera =
+                _zone3OrbitCameraObject
+                    .AddComponent<Camera>();
+
+            _zone3OrbitCamera.FieldOfView =
+                MathHelper.ToRadians(70f);
+
+            scene.Add(
+                _zone3OrbitCameraObject);
+
+            // 3. CINEMATIC CAMERA
+
+            _zone3CinematicCameraObject =
+                new GameObject(
+                    "Zone3 Cinematic Camera");
+
+            _zone3CinematicCameraObject
+                .Transform
+                .TranslateTo(
+                    new Vector3(
+                        Zone3CenterX - 5f,
+                        3.5f,
+                        -3.5f));
+
+            _zone3CinematicCameraObject
+                .Transform
+                .RotateEulerBy(
+                    new Vector3(
+                        MathHelper.ToRadians(-10f),
+                        MathHelper.ToRadians(45f),
+                        0f));
+
+            _zone3CinematicCamera =
+                _zone3CinematicCameraObject
+                    .AddComponent<Camera>();
+
+            _zone3CinematicCamera.FieldOfView =
+                MathHelper.ToRadians(60f);
+
+            scene.Add(
+                _zone3CinematicCameraObject);
+        }
+        private void UpdateZone3OrbitCamera()
+        {
+            if (_zone3CurrentMode !=
+                Zone3CameraMode.Orbit)
+                return;
+
+            if (_zone3OrbitCameraObject == null)
+                return;
+
+            GameObject player =
+                _sceneManager.ActiveScene.Find(
+                    gameObject =>
+                        gameObject.Name ==
+                        AppData.CAMERA_NAME_FIRST_PERSON_PARENT);
+
+            if (player == null)
+                return;
+
+
+            Vector3 playerPosition =
+                player.Transform.Position;
+
+
+            // Fixed orbit angle for demonstration.
+            float radius = 6f;
+
+            float angle =
+                (float)Time.TotalGameTime.TotalSeconds *
+                0.4f;
+
+            Vector3 cameraPosition =
+                new Vector3(
+                    playerPosition.X +
+                        MathF.Cos(angle) * radius,
+                    playerPosition.Y + 4f,
+                    playerPosition.Z +
+                        MathF.Sin(angle) * radius);
+
+
+            _zone3OrbitCameraObject
+                .Transform
+                .TranslateTo(
+                    cameraPosition);
+
+
+            // Point toward the player.
+            Vector3 direction =
+                playerPosition -
+                cameraPosition;
+
+            direction.Normalize();
+
+            float yaw =
+                MathF.Atan2(
+                    direction.X,
+                    -direction.Z);
+
+            float pitch =
+                MathF.Asin(
+                    direction.Y);
+
+
+            _zone3OrbitCameraObject
+                .Transform
+                .RotateEulerTo(
+                    new Vector3(
+                        pitch,
+                        yaw,
+                        0f));
+        }
+        private void InitializeZone3CameraTriggers()
+        {
+            _zone3FirstPersonTrigger =
+                CreateZone3CameraTrigger(
+                    "Zone3 First Person Trigger",
+                    new Vector3(
+                        Zone3CenterX - 3.5f,
+                        1f,
+                        2f),
+                    Zone3CameraMode.FirstPerson);
+
+
+            _zone3OrbitTrigger =
+                CreateZone3CameraTrigger(
+                    "Zone3 Orbit Trigger",
+                    new Vector3(
+                        Zone3CenterX,
+                        1f,
+                        0f),
+                    Zone3CameraMode.Orbit);
+
+
+            _zone3CinematicTrigger =
+                CreateZone3CameraTrigger(
+                    "Zone3 Cinematic Trigger",
+                    new Vector3(
+                        Zone3CenterX + 3.5f,
+                        1f,
+                        -2f),
+                    Zone3CameraMode.Cinematic);
+        }
+        private GameObject CreateZone3CameraTrigger(
+                string name,
+                Vector3 position,
+                Zone3CameraMode mode)
+        {
+            GameObject trigger =
+                new GameObject(name);
+
+            trigger.Transform.TranslateTo(
+                position);
+
+
+            var collider =
+                trigger.AddComponent<BoxCollider>();
+
+            collider.Size =
+                new Vector3(
+                    2f,
+                    2f,
+                    2f);
+
+            collider.Center =
+                Vector3.Zero;
+
+            collider.IsTrigger =
+                true;
+
+
+            var rigidBody =
+                trigger.AddComponent<RigidBody>();
+
+            rigidBody.BodyType =
+                BodyType.Static;
+
+            rigidBody.UseGravity =
+                false;
+
+            trigger.IsStatic =
+                true;
+
+
+            // Attach component that publishes event.
+            var controller =
+                trigger.AddComponent<
+                    Zone3CameraTriggerController>();
+
+            controller.Mode =
+                mode;
+
+
+            _sceneManager.ActiveScene.Add(
+                trigger);
+
+            return trigger;
+        }
+        private void InitializeZone3Events()
+        {
+            _zone3CameraEventSubscription =
+                EngineContext.Instance.Events
+                    .Subscribe<Zone3CameraTriggerEvent>(
+                        OnZone3CameraTrigger);
+        }
+        private void OnZone3CameraTrigger(
+                Zone3CameraTriggerEvent evt)
+        {
+            SwitchZone3Camera(
+                evt.Mode);
+        }
+        private void SwitchZone3Camera(
+                Zone3CameraMode mode)
+        {
+            Scene scene =
+                _sceneManager.ActiveScene;
+
+            _zone3CurrentMode =
+                mode;
+
+
+            switch (mode)
+            {
+                case Zone3CameraMode.FirstPerson:
+
+                    if (_zone3FirstPersonCamera != null)
+                    {
+                        scene.ActiveCamera =
+                            _zone3FirstPersonCamera;
+                    }
+
+                    break;
+
+
+                case Zone3CameraMode.Orbit:
+
+                    if (_zone3OrbitCamera != null)
+                    {
+                        scene.ActiveCamera =
+                            _zone3OrbitCamera;
+                    }
+
+                    break;
+
+
+                case Zone3CameraMode.Cinematic:
+
+                    if (_zone3CinematicCamera != null)
+                    {
+                        scene.ActiveCamera =
+                            _zone3CinematicCamera;
+                    }
+
+                    break;
+            }
+
+
+            System.Diagnostics.Debug.WriteLine(
+                $"Zone 3 Camera Mode: {mode}");
+        }
+        #region temporary visible collision zones
+        //temporary visible collision zones, delete in the future
+        InitializeModel(
+            new Vector3(
+                Zone3CenterX - 3.5f,
+                1f,
+                2f),
+            Vector3.Zero,
+            new Vector3(
+                2f,
+                2f,
+                2f),
+            Zone1Texture,
+            Zone1CubeModel,
+            "First Person Camera Zone");
+
+
+        InitializeModel(
+            new Vector3(
+                Zone3CenterX,
+                1f,
+                0f),
+            Vector3.Zero,
+            new Vector3(
+                2f,
+                2f,
+                2f),
+            Zone1Texture,
+            Zone1CubeModel,
+            "Orbit Camera Zone");
+
+
+        InitializeModel(
+            new Vector3(
+                Zone3CenterX + 3.5f,
+                1f,
+                -2f),
+            Vector3.Zero,
+            new Vector3(
+                2f,
+                2f,
+                2f),
+            Zone1Texture,
+            Zone1CubeModel,
+            "Cinematic Camera Zone");
+            #endregion
 
         private void SetPauseShowMenu()
         {
@@ -1666,6 +2184,7 @@ namespace GDGame
 
             UpdateZone2SpatialAudio();
             UpdateZone2Interaction();
+            UpdateZone3OrbitCamera();
 
             base.Update(gameTime);
         }
@@ -1730,6 +2249,9 @@ namespace GDGame
 
                 _zone2MusicEventSubscription?.Dispose();
                 _zone2MusicEventSubscription = null;
+
+                _zone3CameraEventSubscription?.Dispose();
+                _zone3CameraEventSubscription = null;
 
                 // 4. Dispose EngineContext (which owns SpriteBatch and Content)
                 System.Diagnostics.Debug.WriteLine("Disposing EngineContext");
