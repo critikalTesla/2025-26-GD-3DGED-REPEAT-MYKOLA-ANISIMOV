@@ -354,21 +354,7 @@ namespace GDGame
                 new Vector3(wallThickness, roomHeight, roomLength),
                 Vector3.Zero);
 
-            // Right wall
-            InitializeModel(
-                    new Vector3(
-                        roomWidth / 2f,
-                        roomHeight / 2f,
-                        0f),
-                    Vector3.Zero,
-                    new Vector3(
-                        wallThickness,
-                        roomHeight,
-                        roomLength),
-                    Zone1Texture,
-                    Zone1CubeModel,
-                        "Zone1 Right Wall Visual");
-
+           
         }
         private void InitializeZone1Table()
         {
@@ -686,21 +672,7 @@ namespace GDGame
                     roomHeight,
                     wallThickness));
 
-            // RIGHT WALL
-
-            InitializeModel(
-                new Vector3(
-                    centerX + roomWidth / 2f,
-                    roomHeight / 2f,
-                    0f),
-                Vector3.Zero,
-                new Vector3(
-                    wallThickness,
-                    roomHeight,
-                    roomLength),
-                Zone1Texture,
-                Zone1CubeModel,
-                "Zone2 Right Wall Visual");
+          
         }
         private GameObject CreateZone2StaticBox(
                             string name,
@@ -757,7 +729,7 @@ namespace GDGame
                 InitializeModel(
                     new Vector3(
                         Zone2CenterX + 4f,
-                        5 f,
+                        5f,
                         -2f),
                     Vector3.Zero,
                     Vector3.One,
@@ -1100,22 +1072,6 @@ namespace GDGame
                     roomHeight,
                     wallThickness));
 
-            // RIGHT WALL
-
-            InitializeModel(
-                new Vector3(
-                    centerX + roomWidth / 2f,
-                    roomHeight / 2f,
-                    0f),
-                Vector3.Zero,
-                new Vector3(
-                    wallThickness,
-                    roomHeight,
-                    roomLength),
-                Zone1Texture,
-                Zone1CubeModel,
-                "Zone3 Right Wall Visual");
-
             // No full left wall because Zone 2 connects here.
         }
         private GameObject CreateZone3StaticBox(
@@ -1257,8 +1213,7 @@ namespace GDGame
             float radius = 6f;
 
             float angle =
-                (float)Time.TotalGameTime.TotalSeconds *
-                0.4f;
+                        Time.TimeSinceStartupSecs * 0.4f;
 
             Vector3 cameraPosition =
                 new Vector3(
@@ -1292,13 +1247,15 @@ namespace GDGame
                     direction.Y);
 
 
+            Quaternion cameraRotation =
+                        Quaternion.CreateFromYawPitchRoll(
+                            yaw,
+                            pitch,
+                            0f);
+
             _zone3OrbitCameraObject
                 .Transform
-                .RotateEulerTo(
-                    new Vector3(
-                        pitch,
-                        yaw,
-                        0f));
+                .RotateToWorld(cameraRotation);
         }
         private void InitializeZone3CameraTriggers()
         {

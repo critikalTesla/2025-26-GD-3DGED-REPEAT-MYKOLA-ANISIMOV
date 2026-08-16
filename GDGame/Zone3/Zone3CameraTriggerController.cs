@@ -1,6 +1,7 @@
 ﻿using System;
-using GDEngine.Core;
+using GDEngine.Core.Components;
 using GDEngine.Core.Events;
+using GDEngine.Core.Services;
 
 namespace GDGame.Zone3
 {
@@ -8,9 +9,9 @@ namespace GDGame.Zone3
     {
         public Zone3CameraMode Mode { get; set; }
 
-        private IDisposable _triggerSubscription;
+        private IDisposable? _triggerSubscription;
 
-        public override void Awake()
+        protected override void Awake()
         {
             base.Awake();
 
@@ -24,25 +25,23 @@ namespace GDGame.Zone3
             if (GameObject == null)
                 return;
 
-            // Only react if THIS object is the trigger.
-            if (evt.Trigger.GameObject != GameObject)
-                return;
+            System.Diagnostics.Debug.WriteLine(
+                $"TRIGGER EVENT: " +
+                $"Trigger={evt.TriggerBody?.GameObject?.Name}, " +
+                $"Other={evt.OtherBody?.GameObject?.Name}");
 
-            // Only the FPS player can activate it.
-            if (evt.Other.GameObject.Name !=
-                AppData.CAMERA_NAME_FIRST_PERSON_PARENT)
-            {
+            // Only react when THIS GameObject is the trigger volume.
+            if (evt.TriggerBody?.GameObject != GameObject)
                 return;
-            }
 
             System.Diagnostics.Debug.WriteLine(
-                $"ZONE 3 TRIGGER HIT: {Mode}");
+                $"ZONE 3 CAMERA TRIGGER ACTIVATED: {Mode}");
 
             EngineContext.Instance.Events.Publish(
                 new Zone3CameraTriggerEvent(Mode));
         }
 
-        public override void OnDestroy()
+        protected override void OnDestroy()
         {
             _triggerSubscription?.Dispose();
             _triggerSubscription = null;
