@@ -34,7 +34,8 @@ using Microsoft.Xna.Framework.Input;
 using SharpDX.Direct2D1.Effects;
 using Color = Microsoft.Xna.Framework.Color;
 using GDGame.Zone2;
-using GDGame.Zone3;
+using GDGame.Zone3; 
+using GDGame.Zone4;
 
 namespace GDGame
 {
@@ -136,6 +137,49 @@ namespace GDGame
             Zone3CameraMode.FirstPerson;
 
         #endregion
+        #region Zone 4 Fields
+
+        private const float Zone4CenterX = 36f;
+
+        private GameObject _zone4Button;
+        private GameObject _zone4ImpulseObject;
+
+        private KeyboardState _zone4PreviousKeyboardState;
+
+        private bool _zone4StateRequested;
+        private bool _zone4Completed;
+
+        private IDisposable _zone4ButtonSubscription;
+        private IDisposable _zone4StateSubscription;
+        private IDisposable _zone4ImpulseSubscription;
+        private IDisposable _zone4GameWonSubscription;
+
+        #endregion
+        #region Zone 5 Fields
+
+        private const float Zone5CenterX = 48f;
+
+        // Used for 1-5 teleport edge detection.
+        private KeyboardState _zone5PreviousKeyboardState;
+
+        // HUD UI components
+        private UIText _zone5CameraPositionText;
+        private UIText _zone5VelocityText;
+        private UIText _zone5ElapsedTimeText;
+        private UIText _zone5FovText;
+
+        // Interactive UI
+        private UIButton _zone5ResetButton;
+        private UISlider _zone5FovSlider;
+
+        // UI graphics
+        private UITexture _zone5FovTrack;
+        private UITexture _zone5FovHandle;
+
+        // Prevent repeated teleport in one held key press.
+        private int _zone5CurrentZone = 1;
+
+        #endregion
 
         private SceneManager _sceneManager;
         private UIDebugInfo _debugRenderer;
@@ -179,6 +223,8 @@ namespace GDGame
             InitializeZone1();
             InitializeZone2();
             InitializeZone3();
+            InitializeZone4();
+            InitializeZone5();
             #endregion
 
 
@@ -1440,6 +1486,1329 @@ namespace GDGame
                 Zone1CubeModel,
                 "Cinematic Camera Zone");
         }
+        private void InitializeZone4()
+        {
+            _zone4PreviousKeyboardState =
+                Keyboard.GetState();
+
+            _zone4StateRequested = false;
+            _zone4Completed = false;
+
+            InitializeZone4Room();
+
+            InitializeZone4Button();
+
+            InitializeZone4ImpulseObject();
+
+            InitializeZone4EventSubscriptions();
+
+            InitializeZone4ImpulseSubscription();
+
+            InitializeZone4GameState();
+        }
+        private void InitializeZone4Room()
+        {
+            const float roomWidth = 12f;
+            const float roomLength = 10f;
+            const float roomHeight = 4f;
+            const float wallThickness = 0.2f;
+
+            float centerX = Zone4CenterX;
+
+
+            // ============================
+            // FLOOR PHYSICS
+            // ============================
+
+            GameObject floorPhysics =
+                new GameObject("Zone4 Floor Physics");
+
+            floorPhysics.Transform.TranslateTo(
+                new Vector3(
+                    centerX,
+                    -0.25f,
+                    0f));
+
+            var floorCollider =
+                floorPhysics.AddComponent<BoxCollider>();
+
+            floorCollider.Size =
+                new Vector3(
+                    roomWidth,
+                    0.5f,
+                    roomLength);
+
+            floorCollider.Center =
+                Vector3.Zero;
+
+            floorCollider.IsTrigger =
+                false;
+
+            var floorBody =
+                floorPhysics.AddComponent<RigidBody>();
+
+            floorBody.BodyType =
+                BodyType.Static;
+
+            floorBody.UseGravity =
+                false;
+
+            floorPhysics.IsStatic = true;
+
+            _sceneManager.ActiveScene.Add(
+                floorPhysics);
+
+
+            // ============================
+            // FLOOR VISUAL
+            // ============================
+
+            GameObject floorVisual =
+                new GameObject("Zone4 Floor Visual");
+
+            MeshFilter floorMesh =
+                MeshFilterFactory.CreateQuadGridTexturedLit(
+                    _graphics.GraphicsDevice,
+                    1,
+                    1,
+                    roomWidth,
+                    roomLength,
+                    4f,
+                    4f);
+
+            floorVisual.AddComponent(
+                floorMesh);
+
+            MeshRenderer floorRenderer =
+                floorVisual.AddComponent<MeshRenderer>();
+
+            floorRenderer.Material =
+                _matBasicUnlitGround;
+
+            floorRenderer.Overrides.MainTexture =
+                _textureDictionary.Get(
+                    Zone1Texture);
+
+            floorVisual.Transform.RotateEulerBy(
+                new Vector3(
+                    MathHelper.ToRadians(-90f),
+                    0f,
+                    0f));
+
+            floorVisual.Transform.TranslateTo(
+                new Vector3(
+                    centerX,
+                    0.01f,
+                    0f));
+
+            _sceneManager.ActiveScene.Add(
+                floorVisual);
+
+
+            // ============================
+            // FRONT WALL
+            // ============================
+
+            CreateZone4StaticBox(
+                "Zone4 Front Wall",
+                new Vector3(
+                    centerX,
+                    roomHeight / 2f,
+                    roomLength / 2f),
+                new Vector3(
+                    roomWidth,
+                    roomHeight,
+                    wallThickness));
+
+
+            // ============================
+            // BACK WALL
+            // ============================
+
+            CreateZone4StaticBox(
+                "Zone4 Back Wall",
+                new Vector3(
+                    centerX,
+                    roomHeight / 2f,
+                    -roomLength / 2f),
+                new Vector3(
+                    roomWidth,
+                    roomHeight,
+                    wallThickness));
+
+
+            // No left wall:
+            // Zone 3 connects here.
+
+            // No right collider:
+            // Zone 5 will connect here.
+        }
+        private GameObject CreateZone4StaticBox(
+    string name,
+    Vector3 position,
+    Vector3 size)
+        {
+            GameObject gameObject =
+                InitializeModel(
+                    position,
+                    Vector3.Zero,
+                    size,
+                    Zone1Texture,
+                    Zone1CubeModel,
+                    name);
+
+            var collider =
+                gameObject.AddComponent<BoxCollider>();
+
+            collider.Size =
+                size;
+
+            collider.Center =
+                Vector3.Zero;
+
+            var rigidBody =
+                gameObject.AddComponent<RigidBody>();
+
+            rigidBody.BodyType =
+                BodyType.Static;
+
+            rigidBody.UseGravity =
+                false;
+
+            gameObject.IsStatic =
+                true;
+
+            return gameObject;
+        }
+        private void InitializeZone4ImpulseObject()
+        {
+            _zone4ImpulseObject =
+                InitializeModel(
+                    new Vector3(
+                        Zone4CenterX,
+                        1.5f,
+                        -1.5f),
+                    Vector3.Zero,
+                    new Vector3(
+                        1.5f,
+                        1.5f,
+                        1.5f),
+                    "mona lisa",
+                    Zone1CubeModel,
+                    "Zone4 Impulse Display");
+        }
+        private void InitializeZone4EventSubscriptions()
+        {
+            var bus =
+                EngineContext.Instance.Events;
+
+            _zone4ButtonSubscription =
+                bus.On<Zone4ButtonPressedEvent>()
+                    .WithPriorityPreset(
+                        EventPriority.Gameplay)
+                    .Do(evt =>
+                    {
+                        System.Diagnostics.Debug.WriteLine(
+                            $"Zone4 EVENT 1 received: {evt.ButtonName}");
+
+                        EngineContext.Instance.Impulses.Publish(
+                            new Zone4PulseImpulse(
+                                1.0f));
+
+                        bus.Publish(
+                            new Zone4StateRequestEvent(
+                                "Player activated Zone 4 button"));
+                    });
+
+            _zone4StateSubscription =
+                bus.On<Zone4StateRequestEvent>()
+                    .WithPriorityPreset(
+                        EventPriority.UI)
+                    .Do(evt =>
+                    {
+                        System.Diagnostics.Debug.WriteLine(
+                            $"Zone4 EVENT 2 received: {evt.Reason}");
+
+                        _zone4StateRequested = true;
+
+                        bus.Publish(
+                            new PlaySfxEvent(
+                                "SFX_UI_Click_Designed_Pop_Generic_1",
+                                1f,
+                                false));
+                    });
+        }
+        private void InitializeZone4ImpulseSubscription()
+        {
+            var impulseBus =
+                EngineContext.Instance.Impulses;
+
+            _zone4ImpulseSubscription =
+            impulseBus
+                .On<Zone4PulseImpulse>()
+                .WithPriority(
+                    ImpulsePriority.Gameplay)
+                .Do(impulse =>
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"Zone4 IMPULSE received. Strength={impulse.Strength}");
+
+                    if (_zone4ImpulseObject == null)
+                        return;
+
+                    Vector3 current =
+                        _zone4ImpulseObject.Transform.Position;
+
+                    _zone4ImpulseObject.Transform.TranslateTo(
+                        current +
+                        Vector3.Up *
+                        impulse.Strength);
+                });
+        }
+        private void UpdateZone4Interaction()
+        {
+            if (_zone4Button == null)
+                return;
+
+            KeyboardState keyboard =
+                Keyboard.GetState();
+
+
+            GameObject player =
+                _sceneManager.ActiveScene.Find(
+                    gameObject =>
+                        gameObject.Name ==
+                        AppData.CAMERA_NAME_FIRST_PERSON_PARENT);
+
+
+            if (player == null)
+            {
+                _zone4PreviousKeyboardState =
+                    keyboard;
+
+                return;
+            }
+
+
+            float distance =
+                Vector3.Distance(
+                    player.Transform.Position,
+                    _zone4Button.Transform.Position);
+
+
+            bool ePressed =
+                keyboard.IsKeyDown(Keys.E) &&
+                _zone4PreviousKeyboardState.IsKeyUp(Keys.E);
+
+
+            if (distance <= 2.5f &&
+                ePressed &&
+                !_zone4Completed)
+            {
+                EngineContext.Instance.Events.Publish(
+                    new Zone4ButtonPressedEvent(
+                        "Zone4 Event Button"));
+            }
+
+
+            _zone4PreviousKeyboardState =
+                keyboard;
+        }
+        private void InitializeZone4Button()
+        {
+            _zone4Button =
+                InitializeModel(
+                    new Vector3(
+                        Zone4CenterX,
+                        0.6f,
+                        2.5f),
+                    Vector3.Zero,
+                    new Vector3(
+                        1.2f,
+                        1.2f,
+                        1.2f),
+                    Zone1Texture,
+                    Zone1CubeModel,
+                    "Zone4 Event Button");
+
+            var collider =
+                _zone4Button.AddComponent<BoxCollider>();
+
+            collider.Size =
+                new Vector3(
+                    1.2f,
+                    1.2f,
+                    1.2f);
+
+            collider.Center =
+                Vector3.Zero;
+
+            var rigidBody =
+                _zone4Button.AddComponent<RigidBody>();
+
+            rigidBody.BodyType =
+                BodyType.Static;
+
+            rigidBody.UseGravity =
+                false;
+
+            _zone4Button.IsStatic = true;
+        }
+        private void InitializeZone4GameState()
+        {
+            GameStateSystem gameStateSystem =
+                _sceneManager.ActiveScene
+                    .GetSystem<GameStateSystem>();
+
+            if (gameStateSystem == null)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    "Zone4 ERROR: GameStateSystem not found.");
+
+                return;
+            }
+
+            gameStateSystem.Reset();
+
+            var winCondition =
+                new Zone4StateCondition(
+                    "Zone4 event chain completed",
+                    () => _zone4StateRequested);
+
+            gameStateSystem.ConfigureConditions(
+                winCondition,
+                null);
+
+            _zone4GameWonSubscription =
+                EngineContext.Instance.Events
+                    .On<GameWonEvent>()
+                    .WithPriorityPreset(
+                        EventPriority.UI)
+                    .Do(evt =>
+                    {
+                        _zone4Completed = true;
+
+                        System.Diagnostics.Debug.WriteLine(
+                            "ZONE 4 GAME STATE = WON");
+
+                        EngineContext.Instance.Events.Publish(
+                            new PlaySfxEvent(
+                                "SFX_UI_Click_Designed_Pop_Generic_1",
+                                1f,
+                                false));
+
+                        if (_zone4ImpulseObject != null)
+                        {
+                            _zone4ImpulseObject.Transform.ScaleTo(
+                                new Vector3(
+                                    3f,
+                                    3f,
+                                    3f));
+                        }
+                    });
+        }
+        private void InitializeZone5()
+        {
+            _zone5PreviousKeyboardState =
+                Keyboard.GetState();
+
+            InitializeZone5Room();
+
+            InitializeZone5HUD();
+        }
+        private void InitializeZone5Room()
+        {
+            const float roomWidth = 12f;
+            const float roomLength = 10f;
+            const float roomHeight = 4f;
+            const float wallThickness = 0.2f;
+
+            float centerX = Zone5CenterX;
+
+
+            // =====================================
+            // FLOOR PHYSICS
+            // =====================================
+
+            GameObject floorPhysics =
+                new GameObject("Zone5 Floor Physics");
+
+            floorPhysics.Transform.TranslateTo(
+                new Vector3(
+                    centerX,
+                    -0.25f,
+                    0f));
+
+            var floorCollider =
+                floorPhysics.AddComponent<BoxCollider>();
+
+            floorCollider.Size =
+                new Vector3(
+                    roomWidth,
+                    0.5f,
+                    roomLength);
+
+            floorCollider.Center =
+                Vector3.Zero;
+
+            floorCollider.IsTrigger =
+                false;
+
+            var floorRigidBody =
+                floorPhysics.AddComponent<RigidBody>();
+
+            floorRigidBody.BodyType =
+                BodyType.Static;
+
+            floorRigidBody.UseGravity =
+                false;
+
+            floorPhysics.IsStatic = true;
+
+            _sceneManager.ActiveScene.Add(
+                floorPhysics);
+
+
+            // =====================================
+            // FLOOR VISUAL
+            // =====================================
+
+            GameObject floorVisual =
+                new GameObject(
+                    "Zone5 Floor Visual");
+
+            MeshFilter floorMesh =
+                MeshFilterFactory.CreateQuadGridTexturedLit(
+                    _graphics.GraphicsDevice,
+                    1,
+                    1,
+                    roomWidth,
+                    roomLength,
+                    4f,
+                    4f);
+
+            floorVisual.AddComponent(
+                floorMesh);
+
+            MeshRenderer floorRenderer =
+                floorVisual.AddComponent<MeshRenderer>();
+
+            floorRenderer.Material =
+                _matBasicUnlitGround;
+
+            floorRenderer.Overrides.MainTexture =
+                _textureDictionary.Get(
+                    Zone1Texture);
+
+            floorVisual.Transform.RotateEulerBy(
+                new Vector3(
+                    MathHelper.ToRadians(-90f),
+                    0f,
+                    0f));
+
+            floorVisual.Transform.TranslateTo(
+                new Vector3(
+                    centerX,
+                    0.01f,
+                    0f));
+
+            _sceneManager.ActiveScene.Add(
+                floorVisual);
+
+
+            // =====================================
+            // FRONT WALL
+            // =====================================
+
+            CreateZone5StaticBox(
+                "Zone5 Front Wall",
+                new Vector3(
+                    centerX,
+                    roomHeight / 2f,
+                    roomLength / 2f),
+                new Vector3(
+                    roomWidth,
+                    roomHeight,
+                    wallThickness));
+
+
+            // =====================================
+            // BACK WALL
+            // =====================================
+
+            CreateZone5StaticBox(
+                "Zone5 Back Wall",
+                new Vector3(
+                    centerX,
+                    roomHeight / 2f,
+                    -roomLength / 2f),
+                new Vector3(
+                    roomWidth,
+                    roomHeight,
+                    wallThickness));
+
+
+            // =====================================
+            // RIGHT WALL
+            // Zone 5 is the final room.
+            // =====================================
+
+            CreateZone5StaticBox(
+                "Zone5 Right Wall",
+                new Vector3(
+                    centerX + roomWidth / 2f,
+                    roomHeight / 2f,
+                    0f),
+                new Vector3(
+                    wallThickness,
+                    roomHeight,
+                    roomLength));
+
+            // NO left wall.
+            // Zone 4 connects directly into Zone 5.
+        }
+        private GameObject CreateZone5StaticBox(
+                string name,
+                Vector3 position,
+                Vector3 size)
+        {
+            GameObject gameObject =
+                InitializeModel(
+                    position,
+                    Vector3.Zero,
+                    size,
+                    Zone1Texture,
+                    Zone1CubeModel,
+                    name);
+
+            var collider =
+                gameObject.AddComponent<BoxCollider>();
+
+            collider.Size = size;
+            collider.Center = Vector3.Zero;
+
+            var rigidBody =
+                gameObject.AddComponent<RigidBody>();
+
+            rigidBody.BodyType =
+                BodyType.Static;
+
+            rigidBody.UseGravity =
+                false;
+
+            gameObject.IsStatic = true;
+
+            return gameObject;
+        }
+        private void InitializeZone5HUD()
+        {
+            InitializeZone5TeleportButtons();
+
+            InitializeZone5LiveStats();
+
+            InitializeZone5UIButton();
+
+            InitializeZone5FovSlider();
+        }
+        private void InitializeZone5TeleportButtons()
+        {
+            float buttonWidth = 220f;
+            float buttonHeight = 42f;
+            float gap = 10f;
+
+            float totalWidth =
+                buttonWidth * 5f +
+                gap * 4f;
+
+            float startX =
+                (_graphics.PreferredBackBufferWidth -
+                 totalWidth) * 0.5f;
+
+            float y = 15f;
+
+            CreateZone5TeleportUIButton(
+                "1 - PHYSICS",
+                1,
+                new Vector2(startX, y),
+                new Vector2(buttonWidth, buttonHeight));
+
+            CreateZone5TeleportUIButton(
+                "2 - AUDIO",
+                2,
+                new Vector2(
+                    startX + (buttonWidth + gap),
+                    y),
+                new Vector2(buttonWidth, buttonHeight));
+
+            CreateZone5TeleportUIButton(
+                "3 - CAMERA",
+                3,
+                new Vector2(
+                    startX + (buttonWidth + gap) * 2f,
+                    y),
+                new Vector2(buttonWidth, buttonHeight));
+
+            CreateZone5TeleportUIButton(
+                "4 - EVENTS",
+                4,
+                new Vector2(
+                    startX + (buttonWidth + gap) * 3f,
+                    y),
+                new Vector2(buttonWidth, buttonHeight));
+
+            CreateZone5TeleportUIButton(
+                "5 - MAIN MENU",
+                5,
+                new Vector2(
+                    startX + (buttonWidth + gap) * 4f,
+                    y),
+                new Vector2(buttonWidth, buttonHeight));
+        }
+        private void CreateZone5TeleportUIButton(
+                    string label,
+                    int zoneNumber,
+                    Vector2 position,
+                    Vector2 size)
+        {
+            GameObject buttonGO =
+                new GameObject(
+                    $"Zone5 UI Button {zoneNumber}");
+
+            // =========================
+            // IMAGE/BACKGROUND
+            // =========================
+
+            UITexture background =
+                buttonGO.AddComponent<UITexture>();
+
+            background.Texture =
+                _textureDictionary.Get(
+                    "button_rectangle_10");
+
+            background.Position =
+                position;
+
+            background.Size =
+                size;
+
+            background.Tint =
+                new Color(
+                    255,
+                    255,
+                    255,
+                    220);
+
+            background.LayerDepth =
+                UILayer.HUD;
+
+
+            // =========================
+            // ACTUAL ENGINE UI BUTTON
+            // =========================
+
+            UIButton button =
+                buttonGO.AddComponent<UIButton>();
+
+            button.Position =
+                position;
+
+            button.Size =
+                size;
+
+            button.TargetGraphic =
+                background;
+
+            button.Interactable =
+                true;
+
+            button.Clicked += () =>
+            {
+                TeleportPlayerToZone(
+                    zoneNumber);
+            };
+
+
+            // =========================
+            // TEXT
+            // =========================
+
+            UIText text =
+                buttonGO.AddComponent<UIText>();
+
+            text.Font =
+                _fontDictionary.Get(
+                    "menufont");
+
+            text.TextProvider =
+                () => label;
+
+            text.PositionProvider =
+                () =>
+                    position +
+                    size * 0.5f;
+
+            text.Anchor =
+                TextAnchor.Center;
+
+            text.FallbackColor =
+                Color.White;
+
+            text.UniformScale =
+                0.65f;
+
+            text.LayerDepth =
+                UILayer.HUD;
+
+            _sceneManager.ActiveScene.Add(
+                buttonGO);
+        }
+        private void InitializeZone5LiveStats()
+        {
+            SpriteFont font =
+                _fontDictionary.Get(
+                    "menufont");
+
+            // =========================
+            // CAMERA POSITION
+            // =========================
+
+            GameObject cameraTextGO =
+                new GameObject(
+                    "Zone5 HUD Camera Position");
+
+            _zone5CameraPositionText =
+                cameraTextGO.AddComponent<UIText>();
+
+            _zone5CameraPositionText.Font =
+                font;
+
+            _zone5CameraPositionText.TextProvider =
+                () =>
+                {
+                    Camera camera =
+                        _sceneManager
+                            .ActiveScene
+                            .ActiveCamera;
+
+                    if (camera == null)
+                        return "Camera: unavailable";
+
+                    Vector3 p =
+                        camera.Transform.Position;
+
+                    return
+                        $"Camera: X={p.X:F1}  Y={p.Y:F1}  Z={p.Z:F1}";
+                };
+
+            _zone5CameraPositionText.PositionProvider =
+                () => new Vector2(
+                    25f,
+                    90f);
+
+            _zone5CameraPositionText.FallbackColor =
+                Color.White;
+
+            _zone5CameraPositionText.UniformScale =
+                0.75f;
+
+            _sceneManager.ActiveScene.Add(
+                cameraTextGO);
+
+
+            // =========================
+            // PLAYER VELOCITY
+            // =========================
+
+            GameObject velocityTextGO =
+                new GameObject(
+                    "Zone5 HUD Player Velocity");
+
+            _zone5VelocityText =
+                velocityTextGO.AddComponent<UIText>();
+
+            _zone5VelocityText.Font =
+                font;
+
+            _zone5VelocityText.TextProvider =
+                () =>
+                {
+                    GameObject player =
+                        GetFirstPersonPlayer();
+
+                    if (player == null)
+                        return "Velocity: player unavailable";
+
+                    RigidBody rb =
+                        player.GetComponent<RigidBody>();
+
+                    if (rb == null)
+                        return "Velocity: rigid body unavailable";
+
+                    Vector3 v =
+                        rb.LinearVelocity;
+
+                    return
+                        $"Velocity: X={v.X:F2}  Y={v.Y:F2}  Z={v.Z:F2}";
+                };
+
+            _zone5VelocityText.PositionProvider =
+                () => new Vector2(
+                    25f,
+                    120f);
+
+            _zone5VelocityText.FallbackColor =
+                Color.White;
+
+            _zone5VelocityText.UniformScale =
+                0.75f;
+
+            _sceneManager.ActiveScene.Add(
+                velocityTextGO);
+
+
+            // =========================
+            // ELAPSED TIME
+            // =========================
+
+            GameObject timeTextGO =
+                new GameObject(
+                    "Zone5 HUD Elapsed Time");
+
+            _zone5ElapsedTimeText =
+                timeTextGO.AddComponent<UIText>();
+
+            _zone5ElapsedTimeText.Font =
+                font;
+
+            _zone5ElapsedTimeText.TextProvider =
+                () =>
+                    $"Elapsed Time: {Time.TimeSinceStartupSecs:F1} s";
+
+            _zone5ElapsedTimeText.PositionProvider =
+                () => new Vector2(
+                    25f,
+                    150f);
+
+            _zone5ElapsedTimeText.FallbackColor =
+                Color.White;
+
+            _zone5ElapsedTimeText.UniformScale =
+                0.75f;
+
+            _sceneManager.ActiveScene.Add(
+                timeTextGO);
+        }
+        private void InitializeZone5UIButton()
+        {
+            Vector2 position =
+                new Vector2(
+                    25f,
+                    210f);
+
+            Vector2 size =
+                new Vector2(
+                    250f,
+                    48f);
+
+            GameObject buttonGO =
+                new GameObject(
+                    "Zone5 Return Button");
+
+            UITexture background =
+                buttonGO.AddComponent<UITexture>();
+
+            background.Texture =
+                _textureDictionary.Get(
+                    "button_rectangle_10");
+
+            background.Position =
+                position;
+
+            background.Size =
+                size;
+
+            background.Tint =
+                Color.White;
+
+
+            _zone5ResetButton =
+                buttonGO.AddComponent<UIButton>();
+
+            _zone5ResetButton.Position =
+                position;
+
+            _zone5ResetButton.Size =
+                size;
+
+            _zone5ResetButton.TargetGraphic =
+                background;
+
+            _zone5ResetButton.Interactable =
+                true;
+
+            _zone5ResetButton.Clicked += () =>
+            {
+                TeleportPlayerToZone(5);
+
+                EngineContext.Instance.Events.Publish(
+                    new PlaySfxEvent(
+                        "SFX_UI_Click_Designed_Pop_Generic_1",
+                        1f,
+                        false));
+            };
+
+
+            UIText label =
+                buttonGO.AddComponent<UIText>();
+
+            label.Font =
+                _fontDictionary.Get(
+                    "menufont");
+
+            label.TextProvider =
+                () => "RETURN TO ZONE 5";
+
+            label.PositionProvider =
+                () =>
+                    position +
+                    size * 0.5f;
+
+            label.Anchor =
+                TextAnchor.Center;
+
+            label.FallbackColor =
+                Color.White;
+
+            label.UniformScale =
+                0.7f;
+
+            _sceneManager.ActiveScene.Add(
+                buttonGO);
+        }
+        private void InitializeZone5FovSlider()
+        {
+            Vector2 trackPosition =
+                new Vector2(
+                    25f,
+                    320f);
+
+            Vector2 trackSize =
+                new Vector2(
+                    350f,
+                    24f);
+
+
+            // =========================
+            // LABEL
+            // =========================
+
+            GameObject labelGO =
+                new GameObject(
+                    "Zone5 FOV Label");
+
+            _zone5FovText =
+                labelGO.AddComponent<UIText>();
+
+            _zone5FovText.Font =
+                _fontDictionary.Get(
+                    "menufont");
+
+            _zone5FovText.TextProvider =
+                () =>
+                    $"Camera FOV: {_zone5FovSlider?.Value:F0} degrees";
+
+            _zone5FovText.PositionProvider =
+                () => new Vector2(
+                    25f,
+                    285f);
+
+            _zone5FovText.FallbackColor =
+                Color.White;
+
+            _zone5FovText.UniformScale =
+                0.75f;
+
+            _sceneManager.ActiveScene.Add(
+                labelGO);
+
+
+            // =========================
+            // SLIDER TRACK
+            // =========================
+
+            GameObject sliderGO =
+                new GameObject(
+                    "Zone5 FOV Slider");
+
+            _zone5FovTrack =
+                sliderGO.AddComponent<UITexture>();
+
+            _zone5FovTrack.Texture =
+                _textureDictionary.Get(
+                    "white_1x1");
+
+            _zone5FovTrack.Position =
+                trackPosition;
+
+            _zone5FovTrack.Size =
+                trackSize;
+
+            _zone5FovTrack.Tint =
+                new Color(
+                    160,
+                    160,
+                    160,
+                    255);
+
+
+            // =========================
+            // HANDLE
+            // =========================
+
+            GameObject handleGO =
+                new GameObject(
+                    "Zone5 FOV Slider Handle");
+
+            _zone5FovHandle =
+                handleGO.AddComponent<UITexture>();
+
+            _zone5FovHandle.Texture =
+                _textureDictionary.Get(
+                    "Free Flat Toggle Thumb Centre Icon");
+
+            _zone5FovHandle.Size =
+                new Vector2(
+                    28f,
+                    38f);
+
+            _sceneManager.ActiveScene.Add(
+                handleGO);
+
+
+            // =========================
+            // SLIDER COMPONENT
+            // =========================
+
+            _zone5FovSlider =
+                sliderGO.AddComponent<UISlider>();
+
+            _zone5FovSlider.Position =
+                trackPosition;
+
+            _zone5FovSlider.Size =
+                trackSize;
+
+            _zone5FovSlider.TargetGraphic =
+                _zone5FovTrack;
+
+            _zone5FovSlider.HandleGraphic =
+                _zone5FovHandle;
+
+            _zone5FovSlider.MinValue =
+                50f;
+
+            _zone5FovSlider.MaxValue =
+                110f;
+
+            _zone5FovSlider.Value =
+                80f;
+
+            _zone5FovSlider.WholeNumbers =
+                true;
+
+            _zone5FovSlider.Interactable =
+                true;
+
+            _zone5FovSlider.ValueChanged +=
+                value =>
+                {
+                    Camera camera =
+                        _sceneManager
+                            .ActiveScene
+                            .ActiveCamera;
+
+                    if (camera == null)
+                        return;
+
+                    camera.FieldOfView =
+                        MathHelper.ToRadians(
+                            value);
+                };
+
+            _sceneManager.ActiveScene.Add(
+                sliderGO);
+        }
+        private GameObject GetFirstPersonPlayer()
+        {
+            return _sceneManager
+                .ActiveScene
+                .Find(
+                    gameObject =>
+                        gameObject.Name ==
+                        AppData.CAMERA_NAME_FIRST_PERSON_PARENT);
+        }
+        private void TeleportPlayerToZone(
+                    int zoneNumber)
+        {
+            GameObject player =
+                GetFirstPersonPlayer();
+
+            if (player == null)
+                return;
+
+            float centerX;
+
+            switch (zoneNumber)
+            {
+                case 1:
+                    centerX = 0f;
+                    break;
+
+                case 2:
+                    centerX = Zone2CenterX;
+                    break;
+
+                case 3:
+                    centerX = Zone3CenterX;
+                    break;
+
+                case 4:
+                    centerX = 36f;
+                    break;
+
+                case 5:
+                    centerX = Zone5CenterX;
+                    break;
+
+                default:
+                    return;
+            }
+
+            Vector3 spawnPosition =
+                new Vector3(
+                    centerX,
+                    1.5f,
+                    4f);
+
+
+            RigidBody rb =
+                player.GetComponent<RigidBody>();
+
+            if (rb != null)
+            {
+                // Stop old movement.
+                rb.LinearVelocity =
+                    Vector3.Zero;
+
+                rb.AngularVelocity =
+                    Vector3.Zero;
+
+                // Temporarily allow Transform -> Physics sync.
+                rb.BodyType =
+                    BodyType.Kinematic;
+
+                player.Transform.TranslateTo(
+                    spawnPosition);
+
+                // Return player to normal FPS physics.
+                rb.BodyType =
+                    BodyType.Dynamic;
+
+                rb.FreezeRotation =
+                    true;
+
+                rb.LinearVelocity =
+                    Vector3.Zero;
+
+                rb.AngularVelocity =
+                    Vector3.Zero;
+            }
+            else
+            {
+                player.Transform.TranslateTo(
+                    spawnPosition);
+            }
+
+            // Always restore FPS camera when teleporting.
+            if (_zone3FirstPersonCamera != null)
+            {
+                _sceneManager
+                    .ActiveScene
+                    .ActiveCamera =
+                    _zone3FirstPersonCamera;
+            }
+
+            _zone3CurrentMode =
+                Zone3CameraMode.FirstPerson;
+
+            _zone5CurrentZone =
+                zoneNumber;
+
+            System.Diagnostics.Debug.WriteLine(
+                $"Teleported to Zone {zoneNumber}: {spawnPosition}");
+        }
+        private void UpdateZone5TeleportKeys()
+        {
+            KeyboardState keyboard =
+                Keyboard.GetState();
+
+            if (keyboard.IsKeyDown(Keys.D1) &&
+                _zone5PreviousKeyboardState.IsKeyUp(Keys.D1))
+            {
+                TeleportPlayerToZone(1);
+            }
+
+            if (keyboard.IsKeyDown(Keys.D2) &&
+                _zone5PreviousKeyboardState.IsKeyUp(Keys.D2))
+            {
+                TeleportPlayerToZone(2);
+            }
+
+            if (keyboard.IsKeyDown(Keys.D3) &&
+                _zone5PreviousKeyboardState.IsKeyUp(Keys.D3))
+            {
+                TeleportPlayerToZone(3);
+            }
+
+            if (keyboard.IsKeyDown(Keys.D4) &&
+                _zone5PreviousKeyboardState.IsKeyUp(Keys.D4))
+            {
+                TeleportPlayerToZone(4);
+            }
+
+            if (keyboard.IsKeyDown(Keys.D5) &&
+                _zone5PreviousKeyboardState.IsKeyUp(Keys.D5))
+            {
+                TeleportPlayerToZone(5);
+            }
+
+            _zone5PreviousKeyboardState =
+                keyboard;
+        }
+        private void UpdateZone5UIMode()
+        {
+            GameObject player =
+                GetFirstPersonPlayer();
+
+            if (player == null)
+                return;
+
+            float minX =
+                Zone5CenterX - 6f;
+
+            float maxX =
+                Zone5CenterX + 6f;
+
+            bool insideZone5 =
+                player.Transform.Position.X >= minX &&
+                player.Transform.Position.X <= maxX;
+
+            IsMouseVisible =
+                insideZone5;
+        }
+
+
+
 
         private void SetPauseShowMenu()
         {
@@ -2141,6 +3510,8 @@ namespace GDGame
             UpdateZone2SpatialAudio();
             UpdateZone2Interaction();
             UpdateZone3OrbitCamera();
+            UpdateZone4Interaction();
+            UpdateZone5TeleportKeys();
 
             base.Update(gameTime);
         }
@@ -2208,6 +3579,18 @@ namespace GDGame
 
                 _zone3CameraEventSubscription?.Dispose();
                 _zone3CameraEventSubscription = null;
+
+                _zone4ButtonSubscription?.Dispose();
+                _zone4ButtonSubscription = null;
+
+                _zone4StateSubscription?.Dispose();
+                _zone4StateSubscription = null;
+
+                _zone4ImpulseSubscription?.Dispose();
+                _zone4ImpulseSubscription = null;
+
+                _zone4GameWonSubscription?.Dispose();
+                _zone4GameWonSubscription = null;
 
                 // 4. Dispose EngineContext (which owns SpriteBatch and Content)
                 System.Diagnostics.Debug.WriteLine("Disposing EngineContext");

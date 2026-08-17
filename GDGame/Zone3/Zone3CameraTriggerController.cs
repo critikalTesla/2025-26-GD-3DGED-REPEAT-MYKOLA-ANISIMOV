@@ -9,7 +9,7 @@ namespace GDGame.Zone3
     {
         public Zone3CameraMode Mode { get; set; }
 
-        private IDisposable? _triggerSubscription;
+        private IDisposable _triggerSubscription;
 
         protected override void Awake()
         {
