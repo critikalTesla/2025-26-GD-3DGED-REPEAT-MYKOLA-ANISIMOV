@@ -179,6 +179,15 @@ namespace GDGame
         // Prevent repeated teleport in one held key press.
         private int _zone5CurrentZone = 1;
 
+        //UI text overlay
+        private UIText _zoneInfoNameText;
+        private UIText _zoneInfoSimulationText;
+        private UIText _zoneInfoActionText;
+
+        private string _zoneInfoName = "";
+        private string _zoneInfoSimulation = "";
+        private string _zoneInfoAction = "";
+
         #endregion
 
         private SceneManager _sceneManager;
@@ -197,6 +206,22 @@ namespace GDGame
             #region Core
             Window.Title = "Zone 1";
             InitializeGraphics(ScreenResolution.R_WXGA_16_10_1280x800);
+
+            //Full-Screen on launch
+           //DisplayMode displayMode =
+           //     GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
+
+           // _graphics.PreferredBackBufferWidth =
+           //     displayMode.Width;
+
+           // _graphics.PreferredBackBufferHeight =
+           //     displayMode.Height;
+
+           // _graphics.IsFullScreen = true;
+
+           // _graphics.ApplyChanges();
+
+
             InitializeMouse();
             InitializeContext();
 
@@ -2109,6 +2134,8 @@ namespace GDGame
             InitializeZone5UIButton();
 
             InitializeZone5FovSlider();
+
+            InitializeZoneInformationHUD();
         }
         private void InitializeZone5TeleportButtons()
         {
@@ -2744,6 +2771,9 @@ namespace GDGame
             _zone5CurrentZone =
                 zoneNumber;
 
+            UpdateZoneInformationHUD(
+                zoneNumber);
+
             System.Diagnostics.Debug.WriteLine(
                 $"Teleported to Zone {zoneNumber}: {spawnPosition}");
         }
@@ -2806,6 +2836,244 @@ namespace GDGame
             IsMouseVisible =
                 insideZone5;
         }
+        private void InitializeZoneInformationHUD()
+        {
+            SpriteFont font =
+                _fontDictionary.Get("menufont");
+
+
+            // =====================================================
+            // 1. ZONE NAME
+            // =====================================================
+
+            GameObject zoneNameGO =
+                new GameObject("HUD Current Zone Name");
+
+            _zoneInfoNameText =
+                zoneNameGO.AddComponent<UIText>();
+
+            _zoneInfoNameText.Font =
+                font;
+
+            _zoneInfoNameText.TextProvider =
+                () => _zoneInfoName;
+
+            _zoneInfoNameText.PositionProvider =
+                () =>
+                {
+                    Viewport viewport =
+                        _graphics.GraphicsDevice.Viewport;
+
+                    return new Vector2(
+                        viewport.Width / 2f,
+                        viewport.Height - 115f);
+                };
+
+            _zoneInfoNameText.Anchor =
+                TextAnchor.Center;
+
+            _zoneInfoNameText.FallbackColor =
+                Color.White;
+
+            _zoneInfoNameText.UniformScale =
+                0.9f;
+
+            _sceneManager.ActiveScene.Add(
+                zoneNameGO);
+
+
+            // =====================================================
+            // 2. WHAT THE ZONE DEMONSTRATES
+            // =====================================================
+
+            GameObject simulationGO =
+                new GameObject("HUD Zone Simulation Description");
+
+            _zoneInfoSimulationText =
+                simulationGO.AddComponent<UIText>();
+
+            _zoneInfoSimulationText.Font =
+                font;
+
+            _zoneInfoSimulationText.TextProvider =
+                () => _zoneInfoSimulation;
+
+            _zoneInfoSimulationText.PositionProvider =
+                () =>
+                {
+                    Viewport viewport =
+                        _graphics.GraphicsDevice.Viewport;
+
+                    return new Vector2(
+                        viewport.Width / 2f,
+                        viewport.Height - 80f);
+                };
+
+            _zoneInfoSimulationText.Anchor =
+                TextAnchor.Center;
+
+            _zoneInfoSimulationText.FallbackColor =
+                Color.White;
+
+            _zoneInfoSimulationText.UniformScale =
+                0.65f;
+
+            _sceneManager.ActiveScene.Add(
+                simulationGO);
+
+
+            // =====================================================
+            // 3. PLAYER INSTRUCTION
+            // =====================================================
+
+            GameObject actionGO =
+                new GameObject("HUD Zone Player Instruction");
+
+            _zoneInfoActionText =
+                actionGO.AddComponent<UIText>();
+
+            _zoneInfoActionText.Font =
+                font;
+
+            _zoneInfoActionText.TextProvider =
+                () => _zoneInfoAction;
+
+            _zoneInfoActionText.PositionProvider =
+                () =>
+                {
+                    Viewport viewport =
+                        _graphics.GraphicsDevice.Viewport;
+
+                    return new Vector2(
+                        viewport.Width / 2f,
+                        viewport.Height - 45f);
+                };
+
+            _zoneInfoActionText.Anchor =
+                TextAnchor.Center;
+
+            _zoneInfoActionText.FallbackColor =
+                Color.White;
+
+            _zoneInfoActionText.UniformScale =
+                0.65f;
+
+            _sceneManager.ActiveScene.Add(
+                actionGO);
+
+
+            // Game normally begins in Zone 1.
+            UpdateZoneInformationHUD(1);
+        }
+        private void UpdateZoneInformationHUD(
+                    int zoneNumber)
+                    {
+                        switch (zoneNumber)
+                        {
+                            // =================================================
+                            // ZONE 1
+                            // =================================================
+
+                            case 1:
+
+                                _zoneInfoName =
+                                    "ZONE 1 - PHYSICS";
+
+                                _zoneInfoSimulation =
+                                    "Simulation: RigidBody physics, gravity, colliders and object-to-object collision.";
+
+                                _zoneInfoAction =
+                                    "Action: Approach the button and press E to release Monkey 2 onto the ramp.";
+
+                                break;
+
+
+                            // =================================================
+                            // ZONE 2
+                            // =================================================
+
+                            case 2:
+
+                                _zoneInfoName =
+                                    "ZONE 2 - AUDIO";
+
+                                _zoneInfoSimulation =
+                                    "Simulation: 3D spatial audio, positional attenuation, music switching and EventBus SFX.";
+
+                                _zoneInfoAction =
+                                    "Action: Move between both sound sources, then approach the audio button and press E.";
+
+                                break;
+
+
+                            // =================================================
+                            // ZONE 3
+                            // =================================================
+
+                            case 3:
+
+                                _zoneInfoName =
+                                    "ZONE 3 - CAMERA SYSTEM";
+
+                                _zoneInfoSimulation =
+                                    "Simulation: First-person, orbit and cinematic camera modes.";
+
+                                _zoneInfoAction =
+                                    "Action: Walk through the camera trigger volumes to switch between camera modes.";
+
+                                break;
+
+
+                            // =================================================
+                            // ZONE 4
+                            // =================================================
+
+                            case 4:
+
+                                _zoneInfoName =
+                                    "ZONE 4 - EVENTS AND GAME STATE";
+
+                                _zoneInfoSimulation =
+                                    "Simulation: EventBus, ImpulseBus, event priorities and GameStateSystem.";
+
+                                _zoneInfoAction =
+                                    "Action: Approach the event button and press E to trigger the event and impulse chain.";
+
+                                break;
+
+
+                            // =================================================
+                            // ZONE 5
+                            // =================================================
+
+                            case 5:
+
+                                _zoneInfoName =
+                                    "ZONE 5 - MAIN MENU AND UI";
+
+                                _zoneInfoSimulation =
+                                    "Simulation: Live HUD, UIButton, UISlider and zone teleportation.";
+
+                                _zoneInfoAction =
+                                    "Action: Press 1-5 or use the UI buttons to teleport. Drag the FOV slider to change the camera.";
+
+                                break;
+
+
+                            default:
+
+                                _zoneInfoName =
+                                    "UNKNOWN ZONE";
+
+                                _zoneInfoSimulation =
+                                    "";
+
+                                _zoneInfoAction =
+                                    "";
+
+                                break;
+                        }
+                    }
 
 
 
