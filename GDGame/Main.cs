@@ -188,6 +188,8 @@ namespace GDGame
         private string _zoneInfoSimulation = "";
         private string _zoneInfoAction = "";
 
+        private KeyboardState _zone5PreviousFovKeyboardState;
+
         #endregion
 
         private SceneManager _sceneManager;
@@ -1669,42 +1671,42 @@ namespace GDGame
             // Zone 5 will connect here.
         }
         private GameObject CreateZone4StaticBox(
-    string name,
-    Vector3 position,
-    Vector3 size)
-        {
-            GameObject gameObject =
-                InitializeModel(
-                    position,
-                    Vector3.Zero,
-                    size,
-                    Zone1Texture,
-                    Zone1CubeModel,
-                    name);
+                string name,
+                Vector3 position,
+                Vector3 size)
+                    {
+                        GameObject gameObject =
+                            InitializeModel(
+                                position,
+                                Vector3.Zero,
+                                size,
+                                Zone1Texture,
+                                Zone1CubeModel,
+                                name);
 
-            var collider =
-                gameObject.AddComponent<BoxCollider>();
+                        var collider =
+                            gameObject.AddComponent<BoxCollider>();
 
-            collider.Size =
-                size;
+                        collider.Size =
+                            size;
 
-            collider.Center =
-                Vector3.Zero;
+                        collider.Center =
+                            Vector3.Zero;
 
-            var rigidBody =
-                gameObject.AddComponent<RigidBody>();
+                        var rigidBody =
+                            gameObject.AddComponent<RigidBody>();
 
-            rigidBody.BodyType =
-                BodyType.Static;
+                        rigidBody.BodyType =
+                            BodyType.Static;
 
-            rigidBody.UseGravity =
-                false;
+                        rigidBody.UseGravity =
+                            false;
 
-            gameObject.IsStatic =
-                true;
+                        gameObject.IsStatic =
+                            true;
 
-            return gameObject;
-        }
+                        return gameObject;
+                    }
         private void InitializeZone4ImpulseObject()
         {
             _zone4ImpulseObject =
@@ -1940,6 +1942,9 @@ namespace GDGame
             InitializeZone5Room();
 
             InitializeZone5HUD();
+
+            _zone5PreviousFovKeyboardState =
+                        Keyboard.GetState();
         }
         private void InitializeZone5Room()
         {
@@ -2281,7 +2286,7 @@ namespace GDGame
                 Color.White;
 
             text.UniformScale =
-                0.65f;
+                0.4f;
 
             text.LayerDepth =
                 UILayer.HUD;
@@ -2336,7 +2341,7 @@ namespace GDGame
                 Color.White;
 
             _zone5CameraPositionText.UniformScale =
-                0.75f;
+                0.4f;
 
             _sceneManager.ActiveScene.Add(
                 cameraTextGO);
@@ -2387,7 +2392,7 @@ namespace GDGame
                 Color.White;
 
             _zone5VelocityText.UniformScale =
-                0.75f;
+                0.4f;
 
             _sceneManager.ActiveScene.Add(
                 velocityTextGO);
@@ -2420,7 +2425,7 @@ namespace GDGame
                 Color.White;
 
             _zone5ElapsedTimeText.UniformScale =
-                0.75f;
+                0.4f;
 
             _sceneManager.ActiveScene.Add(
                 timeTextGO);
@@ -2541,8 +2546,8 @@ namespace GDGame
                     "menufont");
 
             _zone5FovText.TextProvider =
-                () =>
-                    $"Camera FOV: {_zone5FovSlider?.Value:F0} degrees";
+                        () =>
+                            $"Camera FOV: {_zone5FovSlider?.Value:F0} degrees   [Z -] [X +]";
 
             _zone5FovText.PositionProvider =
                 () => new Vector2(
@@ -2553,7 +2558,7 @@ namespace GDGame
                 Color.White;
 
             _zone5FovText.UniformScale =
-                0.75f;
+                0.4f;
 
             _sceneManager.ActiveScene.Add(
                 labelGO);
@@ -2841,10 +2846,7 @@ namespace GDGame
             SpriteFont font =
                 _fontDictionary.Get("menufont");
 
-
-            // =====================================================
             // 1. ZONE NAME
-            // =====================================================
 
             GameObject zoneNameGO =
                 new GameObject("HUD Current Zone Name");
@@ -2876,7 +2878,7 @@ namespace GDGame
                 Color.White;
 
             _zoneInfoNameText.UniformScale =
-                0.9f;
+                0.3f;
 
             _sceneManager.ActiveScene.Add(
                 zoneNameGO);
@@ -2916,7 +2918,7 @@ namespace GDGame
                 Color.White;
 
             _zoneInfoSimulationText.UniformScale =
-                0.65f;
+                0.3f;
 
             _sceneManager.ActiveScene.Add(
                 simulationGO);
@@ -2956,7 +2958,7 @@ namespace GDGame
                 Color.White;
 
             _zoneInfoActionText.UniformScale =
-                0.65f;
+                0.3f;
 
             _sceneManager.ActiveScene.Add(
                 actionGO);
@@ -3074,6 +3076,48 @@ namespace GDGame
                                 break;
                         }
                     }
+        private void UpdateZone5FovKeys()
+        {
+            if (_zone5FovSlider == null)
+                return;
+
+            KeyboardState keyboard =
+                Keyboard.GetState();
+
+            bool zPressed =
+                keyboard.IsKeyDown(Keys.Z) &&
+                _zone5PreviousFovKeyboardState.IsKeyUp(Keys.Z);
+
+            bool xPressed =
+                keyboard.IsKeyDown(Keys.X) &&
+                _zone5PreviousFovKeyboardState.IsKeyUp(Keys.X);
+
+            const float fovStep = 5f;
+
+            // Z = decrease FOV
+            if (zPressed)
+            {
+                _zone5FovSlider.Value =
+                    MathHelper.Clamp(
+                        _zone5FovSlider.Value - fovStep,
+                        _zone5FovSlider.MinValue,
+                        _zone5FovSlider.MaxValue);
+            }
+
+            // X = increase FOV
+            if (xPressed)
+            {
+                _zone5FovSlider.Value =
+                    MathHelper.Clamp(
+                        _zone5FovSlider.Value + fovStep,
+                        _zone5FovSlider.MinValue,
+                        _zone5FovSlider.MaxValue);
+            }
+
+            _zone5PreviousFovKeyboardState =
+                keyboard;
+        }
+
 
 
 
@@ -3780,6 +3824,8 @@ namespace GDGame
             UpdateZone3OrbitCamera();
             UpdateZone4Interaction();
             UpdateZone5TeleportKeys();
+            UpdateZone5FovKeys();
+            UpdateZone5UIMode();
 
             base.Update(gameTime);
         }

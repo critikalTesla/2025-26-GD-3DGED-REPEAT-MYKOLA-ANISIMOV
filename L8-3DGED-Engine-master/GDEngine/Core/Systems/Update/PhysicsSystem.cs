@@ -571,74 +571,122 @@ namespace GDEngine.Core.Systems
             //}
 
             public bool ConfigureContactManifold<TManifold>(
-                int workerIndex,
-                CollidablePair pair,
-                ref TManifold manifold,
-                out PairMaterialProperties props)
-                where TManifold : unmanaged, IContactManifold<TManifold>
+                        int workerIndex,
+                        CollidablePair pair,
+                        ref TManifold manifold,
+                        out PairMaterialProperties props)
+                        where TManifold : unmanaged, IContactManifold<TManifold>
             {
-                // Default material settings
+                // Normal physical material.
                 props = new PairMaterialProperties
                 {
                     FrictionCoefficient = 0.5f,
                     MaximumRecoveryVelocity = 2f,
-                    SpringSettings = new SpringSettings(30, 1)
+                    SpringSettings = new SpringSettings(30f, 1f)
                 };
 
-                // Look up RigidBody instances for both collidables (static or dynamic/kinematic).
-                RigidBody? rbA = null;
-                RigidBody? rbB = null;
+                RigidBody rbA = null;
+                RigidBody rbB = null;
 
                 var a = pair.A;
                 var b = pair.B;
 
                 if (a.Mobility == CollidableMobility.Static)
-                    _system._staticHandleToComponent.TryGetValue(a.StaticHandle, out rbA);
+                {
+                    _system._staticHandleToComponent
+                        .TryGetValue(
+                            a.StaticHandle,
+                            out rbA);
+                }
                 else
-                    _system._handleToComponent.TryGetValue(a.BodyHandle, out rbA);
+                {
+                    _system._handleToComponent
+                        .TryGetValue(
+                            a.BodyHandle,
+                            out rbA);
+                }
+
 
                 if (b.Mobility == CollidableMobility.Static)
-                    _system._staticHandleToComponent.TryGetValue(b.StaticHandle, out rbB);
+                {
+                    _system._staticHandleToComponent
+                        .TryGetValue(
+                            b.StaticHandle,
+                            out rbB);
+                }
                 else
-                    _system._handleToComponent.TryGetValue(b.BodyHandle, out rbB);
+                {
+                    _system._handleToComponent
+                        .TryGetValue(
+                            b.BodyHandle,
+                            out rbB);
+                }
 
                 if (rbA == null || rbB == null)
-                    return true;
-
-                var colliderA = rbA.GameObject?.GetComponent<Collider>();
-                var colliderB = rbB.GameObject?.GetComponent<Collider>();
-
-                bool aIsTrigger = colliderA?.IsTrigger == true;
-                bool bIsTrigger = colliderB?.IsTrigger == true;
-                bool isTriggerPair = aIsTrigger || bIsTrigger;
-
-                // Publish via EventBus (if available)
-                var scene = _system.Scene;
-                var context = scene?.Context;
-                var bus = context?.Events;
-
-                if (bus != null)
                 {
-                    if (isTriggerPair)
-                    {
-                        var trigger = aIsTrigger ? rbA : rbB;
-                        var other = trigger == rbA ? rbB! : rbA!;
-                        bus.Post(new TriggerEvent(trigger!, other));
-                    }
-                    else
-                    {
-                        bus.Post(new CollisionEvent(rbA, rbB));
-                    }
+                    return true;
                 }
 
-                // For trigger pairs, disable physical response by zeroing material.
+                Collider colliderA =
+                    rbA.GameObject?.GetComponent<Collider>();
+
+                Collider colliderB =
+                    rbB.GameObject?.GetComponent<Collider>();
+
+                bool aIsTrigger =
+                    colliderA != null &&
+                    colliderA.IsTrigger;
+
+                bool bIsTrigger =
+                    colliderB != null &&
+                    colliderB.IsTrigger;
+
+                bool isTriggerPair =
+                    aIsTrigger || bIsTrigger;
+
+
                 if (isTriggerPair)
                 {
-                    props.FrictionCoefficient = 0f;
-                    props.MaximumRecoveryVelocity = 0f;
-                    props.SpringSettings = new SpringSettings(0f, 1f);
+                    RigidBody trigger =
+                        aIsTrigger
+                            ? rbA
+                            : rbB;
+
+                    RigidBody other =
+                        trigger == rbA
+                            ? rbB
+                            : rbA;
+
+                    // Publish trigger event.
+                    var scene = _system.Scene;
+                    var bus = scene?.Context?.Events;
+
+                    if (bus != null)
+                    {
+                        bus.Post(
+                            new TriggerEvent(
+                                trigger,
+                                other));
+                    }
+
+                    return false;
                 }
 
+                var normalScene =
+                    _system.Scene;
+
+                var normalBus =
+                    normalScene?.Context?.Events;
+
+                if (normalBus != null)
+                {
+                    normalBus.Post(
+                        new CollisionEvent(
+                            rbA,
+                            rbB));
+                }
+
+                // Normal objects should physically collide.
                 return true;
             }
 
